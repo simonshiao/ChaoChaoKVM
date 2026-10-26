@@ -4,6 +4,7 @@
   const bridge = window.chrome && window.chrome.webview;
   let state = { connected: false, peer: '', allowControl: false, library:{groups:[],devices:[]}, sessions:[] }, busy = false, busyTimer, toastTimer, addressList = null, deviceGroup = '__all';
   let groupRenderSignature = '', deviceRenderSignature = '', sessionRenderSignature = '';
+  let nearbySignature = '', awaitingResolution = false, connectionTargetIp = '';
   const send = (command, payload = {}) => {
     if (!bridge) { toast('這是介面預覽，請從吵吵 KVM 桌面程式操作。'); return false; }
     bridge.postMessage({ command, ...payload }); return true;
@@ -31,16 +32,22 @@
     $('breadcrumb').textContent = '工作空間 / ' + ({devices:'裝置中心', online:'Online 連線', cloudflare:'網路連線', connect:'遠端連線', files:'檔案傳輸', settings:'偏好設定'}[name]);
   }
   document.querySelectorAll('[data-page]').forEach(el => el.addEventListener('click', () => page(el.dataset.page)));
-  function setBusy(value) { busy = value; $('connect-button').disabled = value; $('connect-button').textContent = value ? '連線中…' : '連線 ↗'; $('connect-form').setAttribute('aria-busy', String(value)); }
+  function setBusy(value, label = '連線中…') { busy = value; $('connect-button').disabled = value; $('connect-button').textContent = value ? label : '連線 ↗'; $('connect-form').setAttribute('aria-busy', String(value)); }
+  function validTarget(value) {
+    if (/^[\d.]+$/.test(value)) { const parts=value.split('.'); return parts.length===4 && parts.every(p=>/^\d{1,3}$/.test(p)&&Number(p)<=255); }
+    return value.length>0 && value.length<=253 && value.replace(/\.$/,'').split('.').every(p=>p.length<=63 && /^[\p{L}\p{N}_](?:[\p{L}\p{N}_-]*[\p{L}\p{N}_])?$/u.test(p));
+  }
   $('connect-form').addEventListener('submit', e => {
     e.preventDefault(); if (busy) return;
     const ip = $('peer-ip').value.trim();
-    const parts = ip.split('.');
-    if (parts.length !== 4 || parts.some(p => !/^\d{1,3}$/.test(p) || Number(p) > 255)) { $('connect-error').textContent = '請輸入有效的 IPv4 位址，例如 192.168.1.20。'; $('peer-ip').setAttribute('aria-invalid','true'); $('peer-ip').focus(); return; }
+    if (!validTarget(ip)) { $('connect-error').textContent = '請輸入電腦名稱或完整 IPv4 位址，例如 Home-1 或 192.168.1.20。'; $('peer-ip').setAttribute('aria-invalid','true'); $('peer-ip').focus(); return; }
     $('peer-ip').removeAttribute('aria-invalid'); $('connect-error').textContent = '';
     if (!send('connect', { ip })) return;
-    setBusy(true); clearTimeout(busyTimer); busyTimer = setTimeout(() => { setBusy(false); if (!state.connected) $('connect-error').textContent = '尚未連上。請確認對方已開啟程式，位址與網路可通。背景會繼續重試。'; }, 10000);
+    awaitingResolution=true; connectionTargetIp=''; $('connect-progress').textContent=/^[\d.]+$/.test(ip)?'正在連線到 '+ip+'…':'正在尋找「'+ip+'」…';
+    setBusy(true, /^[\d.]+$/.test(ip)?'連線中…':'尋找中…'); clearTimeout(busyTimer); busyTimer = setTimeout(() => { awaitingResolution=false; setBusy(false); $('connect-progress').textContent=''; $('connect-error').textContent = '尚未連上。請確認對方已開啟程式，名稱、位址與網路可通。'; }, 10000);
   });
+  $('refresh-nearby').addEventListener('click', () => { if(send('discoverPeers')) $('nearby-empty').textContent='正在尋找附近的 KVM…'; });
+  $('copy-name').addEventListener('click', () => send('copyMachineName'));
   $('open-session').addEventListener('click', () => { if (state.connected) send('openSession'); else { $('peer-ip').value = state.peer; $('connect-form').requestSubmit(); } });
   $('copy-ip').addEventListener('click', () => send('copyIp', {ip:$('local-ip').value}));
   $('allow-control').addEventListener('change', e => { if (!send('allowControl', {enabled:e.target.checked})) e.target.checked = state.allowControl; });
@@ -105,6 +112,20 @@
     $('device-group').value=device&&device.group||groups[0]||'未分類'; $('device-editor-title').textContent=device?'編輯裝置':'新增裝置'; $('delete-device').hidden=!device; $('device-editor').hidden=false; $('device-name').focus();
   }
   function selectDeviceGroup(group) { deviceGroup=group; document.querySelectorAll('.group-item').forEach(b=>b.classList.toggle('active',b.dataset.group===group)); renderDeviceCenter(); }
+  function renderNearby() {
+    const peers=state.nearbyPeers||[], signature=JSON.stringify(peers);
+    $('refresh-nearby').disabled=!state.discoveryRunning;
+    $('nearby-empty').hidden=peers.length>0;
+    if(!peers.length) $('nearby-empty').textContent=state.discoveryRunning?'尚未找到其他 KVM。請開啟對方的程式並連到同一個 Wi-Fi，也可直接輸入名稱或 IP。':'開啟 KVM 連線服務後，會自動尋找同網路的電腦。';
+    if(signature===nearbySignature) return;
+    nearbySignature=signature;
+    $('nearby-list').replaceChildren(...peers.map(peer=>{
+      const button=document.createElement('button'); button.type='button'; button.className='nearby-peer';
+      const name=document.createElement('strong'), address=document.createElement('span');
+      name.textContent=peer.name; address.textContent=peer.ip+' · HTTP '+peer.port; button.append(name,address);
+      button.addEventListener('click',()=>{if(busy)return;$('peer-ip').value=peer.ip;$('connect-form').requestSubmit();}); return button;
+    }));
+  }
   function renderDeviceCenter() {
     const library=state.library||{groups:[],devices:[]}, devices=library.devices||[], sessions=state.sessions||[], search=$('device-search').value.trim().toLowerCase();
     $('device-count').textContent=devices.length+' 台';
@@ -171,10 +192,17 @@
     $('cf-relay-stop-clients').hidden=(relay.clients||0)===0;
     $('machine').textContent = $('sidebar-machine').textContent = next.machine || '本機電腦';
     const addresses = next.localIps || (next.localIp ? [next.localIp] : []);
-    if (addressList !== JSON.stringify(addresses)) {
-      addressList = JSON.stringify(addresses); const selected = $('local-ip').value;
-      $('local-ip').replaceChildren(...(addresses.length ? addresses : ['']).map(ip => { const option = document.createElement('option'); option.value = ip; option.textContent = ip || '未偵測到位址'; return option; }));
-      $('local-ip').value = addresses.includes(selected) ? selected : addresses[0] || '';
+    const networkInterfaces = next.localInterfaces || [];
+    const choices = addresses.map(ip => {
+      const adapter = networkInterfaces.find(item => item && item.ip === ip);
+      return { ip, label: adapter && adapter.name ? `${adapter.name} · ${ip}` : ip, isWifi: !!(adapter && adapter.isWifi) };
+    }).sort((a, b) => Number(b.isWifi) - Number(a.isWifi));
+    const choiceState = JSON.stringify(choices);
+    if (addressList !== choiceState) {
+      addressList = choiceState; const selected = $('local-ip').value;
+      $('local-ip').replaceChildren(...(choices.length ? choices : [{ ip: '', label: '未偵測到位址' }]).map(item => { const option = document.createElement('option'); option.value = item.ip; option.textContent = item.label; return option; }));
+      const preferred = choices.find(item => item.isWifi);
+      $('local-ip').value = addresses.includes(selected) ? selected : preferred ? preferred.ip : choices[0] ? choices[0].ip : '';
     }
     $('copy-ip').disabled = !addresses.length;
     const label = next.connected ? '已連線' : next.running ? '可供連線' : '尚未啟動';
@@ -195,8 +223,9 @@
     $('route').textContent = next.route || '等待連線'; $('agent-api').textContent = next.agentApi || '—';
     $('fatal').hidden = !next.error; $('fatal').textContent = next.error || '';
     renderDeviceCenter();
-    if (next.connected && busy) { clearTimeout(busyTimer); setBusy(false); $('connect-error').textContent = ''; }
+    renderNearby();
+    if (next.connected && busy && !awaitingResolution && next.peer===connectionTargetIp && next.activePeerConnected!==false) { clearTimeout(busyTimer); setBusy(false); $('connect-progress').textContent=''; $('connect-error').textContent = ''; }
   }
-  if (bridge) { bridge.addEventListener('message', e => { const m = e.data; if (m.type === 'state') render(m.state); else if (m.type === 'toast') toast(m.message); else if (m.type === 'connectError') { clearTimeout(busyTimer); setBusy(false); $('connect-error').textContent = m.message; } else if (m.type === 'logs') $('logs').textContent = m.text || '尚無紀錄'; else if (m.type === 'page') page(m.name); }); send('ready'); }
+  if (bridge) { bridge.addEventListener('message', e => { const m = e.data; if (m.type === 'state') render(m.state); else if (m.type === 'toast') toast(m.message); else if (m.type === 'connectResolved') { awaitingResolution=false; connectionTargetIp=m.ip; $('connect-button').textContent='連線中…'; $('connect-progress').textContent='已找到 '+(m.name||m.ip)+'（'+m.ip+'），正在連線…'; } else if (m.type === 'connectError') { clearTimeout(busyTimer); awaitingResolution=false; setBusy(false); $('connect-progress').textContent=''; $('connect-error').textContent = m.message; } else if (m.type === 'logs') $('logs').textContent = m.text || '尚無紀錄'; else if (m.type === 'page') page(m.name); }); send('ready'); }
   else { $('preview-banner').hidden = false; render({machine:'本機電腦',localIp:'',peer:'',running:false,connected:false,allowControl:false,fps:10,quality:55,library:{groups:['未分類','公司','家用'],devices:[]},sessions:[],onlineMode:false,online:{},cloudflareMode:false,cloudflare:{}}); }
 })();

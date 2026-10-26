@@ -24,6 +24,7 @@ namespace ChaoChaoKvm.Core
         public string OnlineDeviceId { get; set; }
         public string OnlineRegistrySecret { get; set; }
         public string OnlineRegistryUrl { get; set; }
+        public string LanDeviceId { get; set; }
 
         public static string ConfigPath
         {
@@ -54,7 +55,8 @@ namespace ChaoChaoKvm.Core
                 LastOnlinePeerKey = "",
                 OnlineDeviceId = BuildFlavor.IsOnline ? "kvm_" + CreateAccessKey() : "",
                 OnlineRegistrySecret = BuildFlavor.IsOnline ? CreateAccessKey() : "",
-                OnlineRegistryUrl = BuildFlavor.IsOnline ? "https://fidel-multinucleolar-marvella.ngrok-free.dev" : ""
+                OnlineRegistryUrl = BuildFlavor.IsOnline ? "https://fidel-multinucleolar-marvella.ngrok-free.dev" : "",
+                LanDeviceId = Guid.NewGuid().ToString("N")
             };
             try
             {
@@ -62,6 +64,9 @@ namespace ChaoChaoKvm.Core
                 Dictionary<string, object> data = JsonUtil.Parse(File.ReadAllText(ConfigPath));
                 config.ActivePeerIp = JsonUtil.GetString(data, "active_peer_ip", config.ActivePeerIp);
                 config.LastPeerIp = JsonUtil.GetString(data, "last_peer_ip", config.LastPeerIp);
+                string lanId = JsonUtil.GetString(data, "lan_device_id", "");
+                Guid parsedLanId;
+                if (Guid.TryParseExact(lanId, "N", out parsedLanId)) config.LanDeviceId = parsedLanId.ToString("N");
                 config.ManualActivePeer = JsonUtil.GetBool(data, "manual_active_peer", config.ManualActivePeer);
                 config.AllowRemoteControl = JsonUtil.GetBool(data, "allow_remote_control", config.AllowRemoteControl);
                 config.Fps = Math.Max(2, Math.Min(30, JsonUtil.GetInt(data, "fps", config.Fps)));
@@ -93,6 +98,7 @@ namespace ChaoChaoKvm.Core
             Dictionary<string, object> data = new Dictionary<string, object>();
             data["active_peer_ip"] = ActivePeerIp ?? "";
             data["last_peer_ip"] = LastPeerIp ?? "";
+            data["lan_device_id"] = LanDeviceId;
             data["manual_active_peer"] = ManualActivePeer;
             data["allow_remote_control"] = AllowRemoteControl;
             data["fps"] = Fps;

@@ -21,6 +21,8 @@ namespace ChaoChaoKvm
         private readonly KvmPeerManager _manager;
         private readonly DeviceLibraryStore _deviceLibrary;
         private readonly LocalAgentApi _agentApi;
+        private readonly LanDiscoveryService _lanDiscovery;
+        private CancellationTokenSource _connectCancellation;
         private readonly NgrokTunnelService _ngrok;
         private readonly OnlineRegistryClient _registryClient;
         private readonly CloudflareTunnelService _cloudflare;
@@ -56,6 +58,7 @@ namespace ChaoChaoKvm
             if (BuildFlavor.IsOnline) _config.Save();
             if (!string.IsNullOrWhiteSpace(_config.LastPeerIp)) _deviceLibrary.RememberConnection(_config.LastPeerIp, "");
             _manager = new KvmPeerManager(_config);
+            _lanDiscovery = new LanDiscoveryService(_config.LanDeviceId, Environment.MachineName, _manager.Port);
             if (BuildFlavor.IsOnline)
             {
                 _ngrok = new NgrokTunnelService();
@@ -92,7 +95,7 @@ namespace ChaoChaoKvm
                 });
             };
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
-            _timer.Tick += delegate { PublishState(); if (BuildFlavor.IsOnline) TryPublishRegistry(false); if (_openOnConnect && _manager.Connected) { _openOnConnect = false; OpenSession(); } };
+            _timer.Tick += delegate { PublishState(); if (BuildFlavor.IsOnline) TryPublishRegistry(false); if (_openOnConnect && _manager.IsPeerConnected(_manager.ActivePeerIp)) { _openOnConnect = false; OpenSession(); } };
             Loaded += OnLoaded;
             Closed += delegate { ShutdownServices(); };
         }
@@ -116,6 +119,7 @@ namespace ChaoChaoKvm
             if (_closed) return;
             _closed = true;
             _timer.Stop();
+            if (_connectCancellation != null) _connectCancellation.Cancel();
             // A failure in one service must not prevent the HTTP listener,
             // capture workers and local Agent API from releasing their ports.
             try { if (_multiSession != null) _multiSession.Close(); } catch (Exception ex) { Debug.WriteLine(ex); }
@@ -123,6 +127,7 @@ namespace ChaoChaoKvm
             try { if (_cloudflare != null) _cloudflare.Dispose(); } catch (Exception ex) { Debug.WriteLine(ex); }
             try { if (_cloudflareRelay != null) _cloudflareRelay.Dispose(); } catch (Exception ex) { Debug.WriteLine(ex); }
             try { _agentApi.Dispose(); } catch (Exception ex) { Debug.WriteLine(ex); }
+            try { if (_lanDiscovery != null) _lanDiscovery.Dispose(); } catch (Exception ex) { Debug.WriteLine(ex); }
             try { _manager.Dispose(); } catch (Exception ex) { Debug.WriteLine(ex); }
             try { Web.Dispose(); } catch (Exception ex) { Debug.WriteLine(ex); }
         }
@@ -149,6 +154,11 @@ namespace ChaoChaoKvm
                 if (!_preview)
                 {
                     try { _manager.Start(); } catch (Exception ex) { _error = ex.Message; Log(ex.ToString()); }
+                    if (_manager.Running && !BuildFlavor.IsOnline)
+                    {
+                        try { _lanDiscovery.Start(); }
+                        catch (Exception ex) { Log("附近電腦探索無法啟動，仍可用名稱解析或 IP 連線：" + ex.Message); }
+                    }
                     try { _agentApi.Start(); } catch (Exception ex) { Log("Agent API 啟動失敗：" + ex.Message); }
                     if (BuildFlavor.IsOnline && _ngrok != null && _manager.Running)
                     {
@@ -180,11 +190,26 @@ namespace ChaoChaoKvm
                 switch (command)
                 {
                     case "connect":
-                        string ip = JsonUtil.GetString(data, "ip", "").Trim();
-                        if (ip.Length == 0) throw new InvalidOperationException("請輸入另一台電腦的 IP 位址。");
+                        string target = JsonUtil.GetString(data, "ip", "").Trim();
+                        if (target.Length == 0) throw new InvalidOperationException("請輸入另一台電腦的名稱或 IP 位址。");
                         if (!_manager.Running) throw new InvalidOperationException(_error.Length > 0 ? _error : "連線服務尚未啟動。");
-                        _deviceLibrary.RememberConnection(ip, "");
-                        _manager.SetActivePeer(ip); _openOnConnect = true; break;
+                        if (_connectCancellation != null) _connectCancellation.Cancel();
+                        CancellationTokenSource attempt = new CancellationTokenSource();
+                        _connectCancellation = attempt;
+                        try
+                        {
+                            LanPeerAddress resolved = await _lanDiscovery.ResolveAsync(target, attempt.Token);
+                            if (_closed || attempt.IsCancellationRequested) return;
+                            _manager.SetActivePeer(resolved.Ip);
+                            _deviceLibrary.RememberConnection(resolved.Ip, resolved.Name);
+                            _openOnConnect = true;
+                            Post(new { type = "connectResolved", ip = resolved.Ip, name = resolved.Name });
+                        }
+                        catch (OperationCanceledException) { return; }
+                        finally { if (ReferenceEquals(_connectCancellation, attempt)) _connectCancellation = null; attempt.Dispose(); }
+                        break;
+                    case "discoverPeers": if (_lanDiscovery != null) _lanDiscovery.Search(); break;
+                    case "copyMachineName": Clipboard.SetText(Environment.MachineName); Toast("已複製電腦名稱"); break;
                     case "retry": _manager.RetryNow(); Toast("已重新嘗試連線。"); break;
                     case "openSession": OpenSession(); break;
                     case "openDeviceSession": await OpenDeviceSessionAsync(JsonUtil.GetString(data, "id", "")); break;
@@ -387,9 +412,13 @@ namespace ChaoChaoKvm
             ScreenInfo info = _manager.RemoteInfo;
             Post(new { type = "state", state = new {
                 machine = Environment.MachineName, localIps = NetworkUtils.LocalIPv4().ToArray(),
+                localInterfaces = NetworkUtils.LocalNetworkInterfaces().ToArray(),
+                nearbyPeers = _lanDiscovery == null ? new object[0] : _lanDiscovery.Snapshot(),
+                discoveryRunning = _lanDiscovery != null && _lanDiscovery.Running,
                 peer = string.IsNullOrWhiteSpace(_manager.ActivePeerIp) ? _manager.LastPeerIp : _manager.ActivePeerIp,
                 peerName = _manager.Connected && info != null ? info.Machine : "",
                 connected = _manager.Connected, running = _manager.Running, allowControl = _manager.AllowRemoteControl,
+                activePeerConnected = _manager.IsPeerConnected(_manager.ActivePeerIp),
                 fps = _manager.Fps, quality = _manager.JpegQuality, receiveDirectory = _manager.ReceiveDirectory,
                 route = (_manager.OutboundConnected ? "主動連線" : _manager.InboundSeen ? "由對方連入" : "等待連線") + " · HTTP " + _manager.Port,
                 agentApi = "127.0.0.1:" + _agentApi.Port, transferStatus = _transfer, transferring = _transferring, error = _error,

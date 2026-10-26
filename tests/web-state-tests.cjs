@@ -2,6 +2,7 @@
 const fs = require('fs'), vm = require('vm'), assert = require('assert');
 const webRoot = process.argv[2] || __dirname + '/Web';
 const html = fs.readFileSync(webRoot + '/index.html', 'utf8');
+assert(html.includes('對方可輸入上方電腦名稱連線。'),'Computer-name guidance must be visible beside local address selection');
 const elements = new Map();
 function element(id) { const listeners = {}; return {id,value:'',hidden:false,disabled:false,checked:false,textContent:'',dataset:{},attributes:{},children:[],classList:{toggle(){}},replaceChildren(...children){this.children=children;},appendChild(child){this.children.push(child);return child;},append(...children){this.children.push(...children);},addEventListener(n,fn){listeners[n]=fn;},setAttribute(k,v){this.attributes[k]=v;},removeAttribute(k){delete this.attributes[k];},focus(){document.activeElement=this;},fire(n){listeners[n]?.({preventDefault(){},target:this});},requestSubmit(){this.fire('submit');}}; }
 for (const [, id] of html.matchAll(/id="([^"]+)"/g)) elements.set(id,element(id));
@@ -20,11 +21,26 @@ state({peer:'192.168.1.8',connected:true,transferring:true}); assert.equal($('se
 $('peer-ip').value='999.1.1.1'; $('connect-form').fire('submit'); assert.equal($('peer-ip').attributes['aria-invalid'],'true');
 $('peer-ip').value='192.168.1.20'; $('connect-form').fire('submit'); assert.deepEqual(JSON.parse(JSON.stringify(requests.at(-1))),{command:'connect',ip:'192.168.1.20'}); assert.equal($('connect-button').disabled,true);
 receive({data:{type:'connectError',message:'不能連到本機'}}); assert.equal($('connect-button').disabled,false); assert.equal($('connect-error').textContent,'不能連到本機');
+$('peer-ip').value='Home-1'; $('connect-form').fire('submit'); assert.equal(requests.at(-1).ip,'Home-1'); assert.equal($('connect-button').textContent,'尋找中…');
+state({peer:'192.168.1.8',connected:true}); assert.equal($('connect-button').disabled,true,'old peer connection must not finish a new name lookup');
+receive({data:{type:'connectResolved',name:'Home-1',ip:'192.168.1.22'}}); assert($('connect-progress').textContent.includes('192.168.1.22'));
+state({peer:'192.168.1.22',connected:true,activePeerConnected:false}); assert.equal($('connect-button').disabled,true,'stale inbound connection must not finish the selected peer');
+state({peer:'192.168.1.22',connected:true,activePeerConnected:true}); assert.equal($('connect-button').disabled,false); assert.equal($('connect-progress').textContent,'');
+for(const invalid of ['https://Home-1','Home 1','Home-1:8001','127.1','-Home','Home-']) { const before=requests.length; $('peer-ip').value=invalid; $('connect-form').fire('submit'); assert.equal(requests.length,before,'invalid target must not be dispatched: '+invalid); }
+state({discoveryRunning:true,nearbyPeers:[{id:'one',name:'<script>literal</script>',ip:'192.168.1.44',port:8001},{id:'two',name:'TW',ip:'192.168.1.45',port:8001}]});
+assert.equal($('nearby-list').children[0].children[0].textContent,'<script>literal</script>'); assert.equal($('nearby-empty').hidden,true);
+$('nearby-list').children[1].fire('click'); assert.equal(requests.at(-1).ip,'192.168.1.45');
+receive({data:{type:'connectError',message:'找到多台同名電腦'}}); assert.equal($('connect-button').disabled,false);
+$('refresh-nearby').fire('click'); assert.equal(requests.at(-1).command,'discoverPeers'); $('copy-name').fire('click'); assert.equal(requests.at(-1).command,'copyMachineName');
+state({discoveryRunning:false,nearbyPeers:[]}); assert.equal($('nearby-list').children.length,0); assert.equal($('refresh-nearby').disabled,true);
 nav[1].fire('click'); assert.equal($('page-connect').hidden,true); assert.equal($('page-files').hidden,false);
 $('allow-control').checked=true; $('allow-control').fire('change'); assert.equal(requests.at(-1).command,'allowControl');
 state({peer:'192.168.1.8',connected:false}); assert.equal($('send-files').disabled,true); assert.equal($('open-session').textContent,'重新連線 ↗');
+const networkState={localIps:['172.18.0.1','192.168.1.3'],localInterfaces:[{ip:'172.18.0.1',name:'LightXtreme',isWifi:false},{ip:'192.168.1.3',name:'Wi-Fi',isWifi:true}]};
+state(networkState); assert.equal($('local-ip').value,'192.168.1.3'); assert.deepEqual($('local-ip').children.map(x=>x.textContent),['Wi-Fi · 192.168.1.3','LightXtreme · 172.18.0.1']);
+$('local-ip').value='172.18.0.1'; state(networkState); $('copy-ip').fire('click'); assert.equal(requests.at(-1).ip,'172.18.0.1');
 state({localIps:['192.168.1.4','169.254.1.8']}); $('local-ip').value='169.254.1.8'; state({localIps:['192.168.1.4','169.254.1.8']}); $('copy-ip').fire('click'); assert.equal(requests.at(-1).ip,'169.254.1.8');
 const stableLibrary={groups:['未分類','AOI 機台','AI 訓練機'],devices:[{id:'d1',name:'AOI-01',ip:'192.168.1.31',group:'AOI 機台',tags:['AOI'],favorite:false}]};
 state({library:stableLibrary,sessions:[]}); const stableGroupNode=$('group-list').children[0];
 state({library:stableLibrary,sessions:[]}); assert.strictEqual($('group-list').children[0],stableGroupNode,'unchanged state must preserve group DOM nodes');
-console.log('WEB_STATE_PASS: empty, online, busy, error, input validation, navigation, explicit permission, offline, literal peer text, stable adapter selection, single IP copy and stable device-group DOM');
+console.log('WEB_STATE_PASS: name/IP input, lookup progress, nearby selection, stale connection isolation, literal peer text, Wi-Fi-first addresses, preserved manual selection, legacy fallback and device-group DOM');

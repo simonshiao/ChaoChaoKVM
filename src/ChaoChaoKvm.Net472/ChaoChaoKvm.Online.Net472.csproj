@@ -44,6 +44,7 @@
     <Compile Include="Core\DeviceLibraryStore.cs" /><Compile Include="Core\NetworkUtils.cs" /><Compile Include="Core\ChaoTransferDiscovery.cs" /><Compile Include="Core\PacketCodec.cs" /><Compile Include="Core\HttpWire.cs" />
     <Compile Include="Services\ScreenCaptureService.cs" /><Compile Include="Services\InputInjectionService.cs" /><Compile Include="Services\PeerSession.cs" />
     <Compile Include="Services\HttpPeerServer.cs" /><Compile Include="Services\HttpPeerClient.cs" /><Compile Include="Services\RemotePeerSession.cs" /><Compile Include="Services\KvmPeerManager.cs" /><Compile Include="Services\NgrokTunnelService.cs" /><Compile Include="Services\OnlineRegistryClient.cs" /><Compile Include="Services\CloudflareTunnelService.cs" /><Compile Include="Services\CloudflareSettingsStore.cs" />
+    <Compile Include="Services\LanDiscoveryService.cs" /><Compile Include="Services\CloudflareRelayService.cs" />
     <Compile Include="Api\LocalAgentApi.cs" />
   </ItemGroup>
   <ItemGroup><None Include="app.config" /></ItemGroup>

@@ -117,21 +117,23 @@
           <section class="connect-card">
             <div class="section-label"><span class="step">01</span>連到另一台電腦</div>
             <h2>你的下一個工作畫面。</h2>
-            <p class="secondary">輸入對方的區域網路 IP，開始連線。</p>
+            <p class="secondary">輸入電腦名稱或 IP，程式會自動尋找同網路的 KVM。</p>
             <form id="connect-form" novalidate>
-              <label for="peer-ip">遠端電腦位址</label>
-              <div class="address-field"><input id="peer-ip" name="peer-ip" placeholder="例如 192.168.1.20" autocomplete="off" spellcheck="false" aria-describedby="connect-error"><button type="submit" id="connect-button" class="primary">連線 <span aria-hidden="true">↗</span></button></div>
+              <label for="peer-ip">電腦名稱或 IP 位址</label>
+              <div class="address-field"><input id="peer-ip" name="peer-ip" placeholder="例如 Home-1 或 192.168.1.20" autocomplete="off" spellcheck="false" aria-describedby="connect-progress connect-error"><button type="submit" id="connect-button" class="primary">連線 <span aria-hidden="true">↗</span></button></div>
+              <p id="connect-progress" class="connect-progress" role="status"></p>
               <p id="connect-error" class="inline-error" role="alert"></p>
             </form>
             <div class="remember-note"><span aria-hidden="true">↺</span>下次開啟時，會自動嘗試已記住的電腦。</div>
           </section>
           <section class="local-card">
             <div class="section-label"><span class="step">02</span>讓對方連到本機</div>
-            <h2 id="machine">本機電腦</h2><p class="secondary">把本機位址提供給另一端。</p>
+            <div class="local-name-row"><h2 id="machine">本機電腦</h2><button id="copy-name" class="icon-button" type="button">複製名稱</button></div><p class="secondary">對方可輸入上方電腦名稱連線。同一個 Wi-Fi 時，也可選擇「Wi-Fi」位址提供給對方。</p>
             <div class="local-address"><div><label class="field-label" for="local-ip">本機 IP 位址</label><select id="local-ip" aria-label="選擇要提供給對方的本機位址"><option value="">讀取中</option></select></div><button id="copy-ip" class="icon-button" aria-label="複製所選的本機 IP" title="複製位址">複製</button></div>
             <div class="permission-row"><div><label for="allow-control">允許對方控制本機</label><p id="permission-help">關閉後仍可連線與觀看畫面。</p></div><label class="switch"><input id="allow-control" type="checkbox" aria-label="允許對方控制本機"><span></span></label></div>
           </section>
         </div>
+        <section class="nearby-section" aria-labelledby="nearby-heading"><div class="section-heading"><h2 id="nearby-heading">附近的電腦</h2><button id="refresh-nearby" class="text-button" type="button">重新尋找</button></div><p id="nearby-empty" class="nearby-empty">正在尋找附近的 KVM…</p><div id="nearby-list" class="nearby-list"></div></section>
         <section class="device-section"><div class="section-heading"><h2>已記住的電腦</h2><span>繼續上次的工作</span></div>
           <div id="empty-peer" class="empty-row"><span class="empty-mark" aria-hidden="true">↗</span><div><strong>你的第一台遠端電腦，從這裡開始。</strong><p>完成第一次連線後，位址會保留在這裡。</p></div></div>
           <div id="peer-row" class="device-row" hidden><div class="device-icon" aria-hidden="true">▣</div><div class="device-info"><strong id="peer-name">遠端電腦</strong><span id="peer-address"></span></div><div class="device-state"><i id="peer-dot"></i><span id="peer-state">等待連線</span></div><button id="open-session" class="secondary-button">開啟遠端桌面 <span aria-hidden="true">↗</span></button></div>

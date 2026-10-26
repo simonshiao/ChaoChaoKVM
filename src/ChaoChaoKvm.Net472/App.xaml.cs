@@ -14,6 +14,12 @@ namespace ChaoChaoKvm
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "--ui-preview") >= 0)
+            {
+                base.OnStartup(e);
+                return;
+            }
+
             // A second LAN instance would try to bind HTTP 8001 again and
             // previously rendered a confusing ChaoTransfer port-conflict error.
             // Keep LAN and Online independent because they use different ports.

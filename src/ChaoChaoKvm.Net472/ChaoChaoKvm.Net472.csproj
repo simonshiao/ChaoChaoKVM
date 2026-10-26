@@ -73,6 +73,7 @@
     <Compile Include="Services\InputInjectionService.cs" />
     <Compile Include="Services\PeerSession.cs" />
     <Compile Include="Services\HttpPeerServer.cs" />
+    <Compile Include="Services\LanDiscoveryService.cs" />
     <Compile Include="Services\HttpPeerClient.cs" />
     <Compile Include="Services\RemotePeerSession.cs" />
     <Compile Include="Services\KvmPeerManager.cs" />
