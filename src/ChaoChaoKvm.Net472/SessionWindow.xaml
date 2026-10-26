@@ -1,0 +1,225 @@
+<Window x:Class="ChaoChaoKvm.SessionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="遠端桌面 · 吵吵 KVM"
+        Width="1280" Height="820" MinWidth="840" MinHeight="580"
+        Background="#EEF3F8"
+        FontFamily="Segoe UI, Microsoft JhengHei UI" FontSize="14"
+        WindowStartupLocation="CenterScreen"
+        PreviewMouseMove="ChromePointerActivity"
+        MouseLeave="ChromePointerLeave"
+        PreviewKeyDown="OnKeyDown" PreviewKeyUp="OnKeyUp">
+    <Window.Resources>
+        <Style x:Key="GlassIconButton" TargetType="Button">
+            <Setter Property="Width" Value="44"/>
+            <Setter Property="Height" Value="44"/>
+            <Setter Property="Padding" Value="11"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#245B8E"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="IconSurface"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="IconSurface" Property="Background" Value="#44FFFFFF"/>
+                                <Setter TargetName="IconSurface" Property="BorderBrush" Value="#72FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="IconSurface" Property="Background" Value="#70FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="IconSurface" Property="BorderBrush" Value="#A055A7F0"/>
+                                <Setter TargetName="IconSurface" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="IconSurface" Property="Opacity" Value="0.38"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid x:Name="Viewer"
+              Background="#E8EDF3"
+              Focusable="True"
+              ClipToBounds="True"
+              MouseMove="MovePointer"
+              MouseDown="DownPointer"
+              MouseUp="UpPointer"
+              MouseWheel="WheelPointer">
+            <Image x:Name="RemoteImage"
+                   Stretch="Uniform"
+                   RenderOptions.BitmapScalingMode="HighQuality"/>
+            <Border x:Name="EmptyPanel" Background="#F5F7FA">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock x:Name="EmptyTitle"
+                               Text="正在準備遠端畫面"
+                               FontSize="24" FontWeight="SemiBold"
+                               Foreground="#344457"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="EmptyDetail"
+                               Text="連線建立後，畫面會顯示在這裡。"
+                               Foreground="#697586"
+                               Margin="0,14,0,0"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border x:Name="StatusGlass"
+                HorizontalAlignment="Left" VerticalAlignment="Top"
+                Margin="18,16,0,0" Padding="14,9"
+                Opacity="0.28"
+                CornerRadius="15"
+                BorderBrush="#90FFFFFF" BorderThickness="1"
+                IsHitTestVisible="False">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#EAFBFDFF" Offset="0"/>
+                    <GradientStop Color="#B9E5F1FA" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="18" ShadowDepth="3" Opacity="0.18" Color="#345D7B"/>
+            </Border.Effect>
+            <StackPanel>
+                <TextBlock x:Name="PeerName"
+                           Text="遠端桌面"
+                           FontWeight="SemiBold" FontSize="15.5"
+                           Foreground="#172A3D"/>
+                <TextBlock x:Name="SessionStatus"
+                           Text="正在等待畫面"
+                           FontSize="12" Foreground="#5C7084"
+                           Margin="0,3,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="ToolbarGlass"
+                HorizontalAlignment="Right" VerticalAlignment="Top"
+                Margin="0,14,18,0" Padding="5"
+                Opacity="0.32"
+                CornerRadius="18"
+                BorderBrush="#A8FFFFFF" BorderThickness="1">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#E8FBFDFF" Offset="0"/>
+                    <GradientStop Color="#AFCFE4F4" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="22" ShadowDepth="4" Opacity="0.24" Color="#284E6C"/>
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="ToolbarToggleButton"
+                        Style="{StaticResource GlassIconButton}"
+                        Click="ToggleToolbar"
+                        ToolTip="隱藏工具列"
+                        AutomationProperties.Name="隱藏工具列">
+                    <Viewbox Width="20" Height="20">
+                        <Path x:Name="ToolbarToggleIcon"
+                              Data="M14,4 L6,12 L14,20"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="2.1" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              RenderTransformOrigin="0.5,0.5"/>
+                    </Viewbox>
+                </Button>
+
+                <Border x:Name="ToolbarDivider"
+                        Width="1" Height="24" Margin="3,10"
+                        Background="#55FFFFFF"/>
+
+                <StackPanel x:Name="ToolbarActions" Orientation="Horizontal">
+                    <Button Style="{StaticResource GlassIconButton}"
+                            Click="OpenFiles"
+                            ToolTip="傳檔"
+                            AutomationProperties.Name="傳檔">
+                        <Viewbox Width="22" Height="22">
+                            <Path Data="M4,7 L16,7 M12,3 L16,7 L12,11 M20,17 L8,17 M12,13 L8,17 L12,21"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.9" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        </Viewbox>
+                    </Button>
+
+                    <Button Style="{StaticResource GlassIconButton}"
+                            Click="OpenSettings"
+                            ToolTip="設定"
+                            AutomationProperties.Name="設定">
+                        <Viewbox Width="22" Height="22">
+                            <Grid Width="24" Height="24">
+                                <Path Data="M5,7 L19,7 M5,12 L19,12 M5,17 L19,17"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.8" StrokeStartLineCap="Round"/>
+                                <Ellipse Width="4" Height="4" Margin="0,0,7,10" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                         Fill="#F4FAFF" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.5"/>
+                                <Ellipse Width="4" Height="4" Margin="7,0,0,5" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                         Fill="#F4FAFF" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.5"/>
+                                <Ellipse Width="4" Height="4" Margin="0,10,9,0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                         Fill="#F4FAFF" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.5"/>
+                            </Grid>
+                        </Viewbox>
+                    </Button>
+
+                    <Button x:Name="FullScreenButton"
+                            Style="{StaticResource GlassIconButton}"
+                            Click="ToggleFullScreen"
+                            ToolTip="全螢幕"
+                            AutomationProperties.Name="全螢幕">
+                        <Viewbox Width="21" Height="21">
+                            <Path Data="M2,8 L2,2 L8,2 M16,2 L22,2 L22,8 M22,16 L22,22 L16,22 M8,22 L2,22 L2,16"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        </Viewbox>
+                    </Button>
+
+                    <Button Style="{StaticResource GlassIconButton}"
+                            Click="CloseView"
+                            ToolTip="關閉檢視"
+                            AutomationProperties.Name="關閉檢視">
+                        <Viewbox Width="20" Height="20">
+                            <Path Data="M5,5 L19,19 M19,5 L5,19"
+                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                  StrokeThickness="1.9" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        </Viewbox>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Border x:Name="HintGlass"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Margin="0,0,0,14" Padding="14,7"
+                Opacity="0.42"
+                CornerRadius="14"
+                Background="#B9F7FAFD"
+                BorderBrush="#80FFFFFF" BorderThickness="1"
+                IsHitTestVisible="False">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.16" Color="#345D7B"/>
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="ModeHint"
+                           Text="直接操作 · 滑鼠移入即可控制，點一下即可輸入鍵盤"
+                           Foreground="#52687D" FontSize="12" VerticalAlignment="Center"/>
+                <Border Width="1" Height="14" Margin="12,0" Background="#5071869A"/>
+                <TextBlock Text="Ctrl + Alt + Esc　暫停遠端輸入"
+                           Foreground="#6B7F92" FontSize="12" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

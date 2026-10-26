@@ -1,0 +1,30 @@
+// Exercise the shipped event handlers using a minimal DOM adapter. This is not a browser/visual test.
+const fs = require('fs'), vm = require('vm'), assert = require('assert');
+const webRoot = process.argv[2] || __dirname + '/Web';
+const html = fs.readFileSync(webRoot + '/index.html', 'utf8');
+const elements = new Map();
+function element(id) { const listeners = {}; return {id,value:'',hidden:false,disabled:false,checked:false,textContent:'',dataset:{},attributes:{},children:[],classList:{toggle(){}},replaceChildren(...children){this.children=children;},appendChild(child){this.children.push(child);return child;},append(...children){this.children.push(...children);},addEventListener(n,fn){listeners[n]=fn;},setAttribute(k,v){this.attributes[k]=v;},removeAttribute(k){delete this.attributes[k];},focus(){document.activeElement=this;},fire(n){listeners[n]?.({preventDefault(){},target:this});},requestSubmit(){this.fire('submit');}}; }
+for (const [, id] of html.matchAll(/id="([^"]+)"/g)) elements.set(id,element(id));
+const pages = [...elements.values()].filter(e=>e.id.startsWith('page-'));
+const nav = ['connect','files','settings'].map(n=>Object.assign(element(n),{dataset:{page:n}}));
+const document = {activeElement:null,createElement(tag){return element(tag);},getElementById(id){assert(elements.has(id),'unknown element '+id);return elements.get(id);},querySelectorAll(s){return s==='.page'?pages:nav;}};
+let receive; const requests=[], timers=[];
+vm.runInNewContext(fs.readFileSync(webRoot+'/app.js','utf8'),{document,window:{chrome:{webview:{postMessage(m){requests.push(m);},addEventListener(n,fn){receive=fn;}}}},setTimeout(fn){timers.push(fn);return timers.length;},clearTimeout(){}});
+const $=id=>elements.get(id), state=s=>receive({data:{type:'state',state:{machine:'LOCAL',fps:10,quality:55,...s}}});
+assert.equal(requests[0].command,'ready');
+state({peer:'',connected:false}); assert.equal($('peer-row').hidden,true); assert.equal($('send-files').disabled,true);
+state({peer:'192.168.1.8',peerName:'<script>unsafe</script>',connected:true,allowControl:false});
+assert.equal($('peer-row').hidden,false); assert.equal($('send-files').disabled,false); assert.equal($('allow-control').checked,false); assert.equal($('peer-name').textContent,'<script>unsafe</script>');
+$('open-session').fire('click'); assert.equal(requests.at(-1).command,'openSession');
+state({peer:'192.168.1.8',connected:true,transferring:true}); assert.equal($('send-files').disabled,true);
+$('peer-ip').value='999.1.1.1'; $('connect-form').fire('submit'); assert.equal($('peer-ip').attributes['aria-invalid'],'true');
+$('peer-ip').value='192.168.1.20'; $('connect-form').fire('submit'); assert.deepEqual(JSON.parse(JSON.stringify(requests.at(-1))),{command:'connect',ip:'192.168.1.20'}); assert.equal($('connect-button').disabled,true);
+receive({data:{type:'connectError',message:'不能連到本機'}}); assert.equal($('connect-button').disabled,false); assert.equal($('connect-error').textContent,'不能連到本機');
+nav[1].fire('click'); assert.equal($('page-connect').hidden,true); assert.equal($('page-files').hidden,false);
+$('allow-control').checked=true; $('allow-control').fire('change'); assert.equal(requests.at(-1).command,'allowControl');
+state({peer:'192.168.1.8',connected:false}); assert.equal($('send-files').disabled,true); assert.equal($('open-session').textContent,'重新連線 ↗');
+state({localIps:['192.168.1.4','169.254.1.8']}); $('local-ip').value='169.254.1.8'; state({localIps:['192.168.1.4','169.254.1.8']}); $('copy-ip').fire('click'); assert.equal(requests.at(-1).ip,'169.254.1.8');
+const stableLibrary={groups:['未分類','AOI 機台','AI 訓練機'],devices:[{id:'d1',name:'AOI-01',ip:'192.168.1.31',group:'AOI 機台',tags:['AOI'],favorite:false}]};
+state({library:stableLibrary,sessions:[]}); const stableGroupNode=$('group-list').children[0];
+state({library:stableLibrary,sessions:[]}); assert.strictEqual($('group-list').children[0],stableGroupNode,'unchanged state must preserve group DOM nodes');
+console.log('WEB_STATE_PASS: empty, online, busy, error, input validation, navigation, explicit permission, offline, literal peer text, stable adapter selection, single IP copy and stable device-group DOM');

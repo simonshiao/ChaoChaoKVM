@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ChaoChao KVM</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <div class="grid"></div>
+  <div class="scanline"></div>
+
+  <main class="app-shell">
+    <aside class="sidebar glass">
+      <div class="brand">
+        <div class="brand-orbit"><span>◆</span></div>
+        <div>
+          <strong>CHAOCHAO</strong>
+          <small>KVM CONTROL CORE</small>
+        </div>
+      </div>
+
+      <nav>
+        <button class="nav active"><span>◫</span><em>控制中心</em></button>
+        <button class="nav"><span>⌁</span><em>連線裝置</em></button>
+        <button class="nav"><span>⇄</span><em>檔案傳輸</em></button>
+        <button class="nav"><span>◉</span><em>活動紀錄</em></button>
+        <button class="nav"><span>⚙</span><em>系統設定</em></button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="pulse-dot"></div>
+        <div><small>LOCAL ENGINE</small><strong id="engineText">STANDBY</strong></div>
+      </div>
+    </aside>
+
+    <section class="workspace">
+      <header>
+        <div>
+          <p class="eyebrow">SECURE REMOTE WORKSPACE</p>
+          <h1>ChaoChao <span>KVM</span></h1>
+        </div>
+        <div class="header-actions">
+          <div class="status-pill"><i></i><span id="statusText">待命</span></div>
+          <button class="icon-button" title="設定">⚙</button>
+        </div>
+      </header>
+
+      <section class="hero glass">
+        <div class="hero-copy">
+          <div class="hero-kicker">REMOTE NODE / 01</div>
+          <h2>把桌面控制，變成<br/><span>即時可視的連線核心。</span></h2>
+          <p>WebView2 負責動畫與操作體驗；C# 負責 Windows、加密傳輸、影像與輸入。</p>
+          <div class="connect-row">
+            <label>
+              <span>目標 IP</span>
+              <input id="targetIp" value="192.168.1.20" spellcheck="false" />
+            </label>
+            <label class="port-box">
+              <span>PORT</span>
+              <input id="port" value="45888" inputmode="numeric" />
+            </label>
+            <button id="connectBtn" class="primary">啟動控制 <b>→</b></button>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="radar">
+            <div class="radar-ring r1"></div><div class="radar-ring r2"></div><div class="radar-ring r3"></div>
+            <div class="radar-sweep"></div>
+            <div class="node node-a"><i></i><span>HOST</span></div>
+            <div class="node node-b"><i></i><span>CLIENT</span></div>
+            <div class="core"><span>CC</span><small>KVM</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics">
+        <article class="metric glass"><div class="metric-icon">◈</div><div><span>畫面更新</span><strong><b id="fpsValue">18</b> FPS</strong><small>Legacy target</small></div></article>
+        <article class="metric glass"><div class="metric-icon">◇</div><div><span>JPEG 品質</span><strong><b id="qualityValue">65</b>%</strong><small>Adaptive ready</small></div></article>
+        <article class="metric glass"><div class="metric-icon">⌁</div><div><span>安全通道</span><strong>AES-GCM</strong><small>X25519 / HKDF contract</small></div></article>
+        <article class="metric glass"><div class="metric-icon">⇄</div><div><span>傳輸模式</span><strong>256 KB</strong><small>Chunk protocol</small></div></article>
+      </section>
+
+      <section class="lower-grid">
+        <article class="screen-card glass">
+          <div class="card-head"><div><span>REMOTE DISPLAY</span><strong>遠端畫面</strong></div><div class="live-tag">● G0 PREVIEW</div></div>
+          <div class="screen-stage">
+            <div class="screen-noise"></div>
+            <div class="screen-center">
+              <div class="screen-icon">▣</div>
+              <strong>等待遠端影像核心接管</strong>
+              <span>G1 將接上 C# Frame Receiver / Renderer</span>
+            </div>
+            <div class="corners"><i></i><i></i><i></i><i></i></div>
+          </div>
+        </article>
+
+        <article class="control-card glass">
+          <div class="card-head"><div><span>LOCAL HOST</span><strong>本機分享</strong></div><div class="switch" id="hostSwitch"><i></i></div></div>
+          <div class="control-body">
+            <div class="control-line"><span>輸入控制</span><b>允許</b></div>
+            <div class="control-line"><span>監聽埠</span><b>45888</b></div>
+            <div class="control-line"><span>協議</span><b>LKV1</b></div>
+            <div class="divider"></div>
+            <button id="hostBtn" class="secondary">開始分享本機</button>
+            <p class="hint">G0 僅驗證 C# ↔ Web 雙向橋接；尚未啟動 Socket。</p>
+          </div>
+        </article>
+      </section>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

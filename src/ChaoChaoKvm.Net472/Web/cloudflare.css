@@ -1,0 +1,33 @@
+.cf-relay-panel{margin-top:20px}
+.cf-relay-heading{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,.7fr);gap:22px;align-items:center}
+.cf-relay-heading h2{margin-top:12px}
+.cf-relay-heading .secondary{line-height:1.7}
+.cf-relay-state{margin:0}
+.cf-relay-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:18px;padding-top:20px;border-top:1px solid var(--line)}
+.cf-relay-grid>div{min-width:0}
+.cf-relay-grid label{display:block;margin-top:16px}
+.cf-relay-grid textarea{width:100%;resize:vertical;margin-top:8px;padding:12px 13px;border:1px solid #d5e0eb;border-radius:11px;background:#f9fbfd;color:#30445a;font:11px/1.6 Consolas,"Segoe UI",sans-serif;outline:none;word-break:break-all}
+.cf-relay-grid textarea:focus{border-color:#86b3e0;box-shadow:0 0 0 3px #1768c512}
+.cf-field{display:block;width:100%;margin-top:8px;padding:12px 13px;border:1px solid #d5e0eb;border-radius:11px;background:#f9fbfd;color:#30445a;font:13px Consolas,"Segoe UI",sans-serif;outline:none}
+.cf-field:focus{border-color:#86b3e0;box-shadow:0 0 0 3px #1768c512}
+.cf-relay-footnote{font-size:11px;color:var(--muted);line-height:1.6}
+#cf-relay-copy:disabled,#cf-relay-stop:disabled{opacity:.55;cursor:not-allowed}
+#cf-relay-dot{display:block;width:9px;height:9px;border-radius:50%;background:#a9b4c0}
+#cf-relay-dot.online{background:#2aa574;box-shadow:0 0 0 4px #2aa57420}
+@media(max-width:900px){.cf-relay-heading,.cf-relay-grid{grid-template-columns:1fr}.cf-relay-state{margin-top:8px}}
+
+.simple-remote-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;max-width:1080px}
+.simple-remote-card{min-width:0;padding:28px 30px}
+.simple-remote-card h2{margin:20px 0 8px;font-size:22px;letter-spacing:-.02em}
+.simple-remote-card>.secondary{min-height:44px;line-height:1.65}
+.simple-remote-status{margin:22px 0 16px}
+.simple-main-action{width:100%;min-height:48px;margin-top:14px;font-size:14px}
+.simple-main-action:disabled{opacity:.72;cursor:wait}
+.simple-code-wrap{margin-top:20px}
+.simple-code-wrap[hidden],.simple-remote-card [hidden]{display:none!important}
+.simple-code-wrap textarea,.simple-remote-card>textarea{display:block;width:100%;resize:vertical;margin-top:8px;padding:12px 13px;border:1px solid #d5e0eb;border-radius:11px;background:#f9fbfd;color:#30445a;font:11px/1.6 Consolas,"Segoe UI",sans-serif;outline:none;word-break:break-all}
+.simple-code-wrap textarea:focus,.simple-remote-card>textarea:focus{border-color:#86b3e0;box-shadow:0 0 0 3px #1768c512}
+.simple-code-actions{justify-content:space-between;align-items:center;margin-top:10px}
+.simple-remote-hint{margin:18px 0 0;color:var(--muted);font-size:12px;line-height:1.7}
+.simple-remote-footer{display:flex;justify-content:space-between;gap:16px;max-width:1080px;margin-top:18px;color:var(--muted);font-size:12px}
+@media(max-width:900px){.simple-remote-grid{grid-template-columns:1fr}.simple-remote-card{padding:24px}.simple-remote-footer{flex-direction:column}}

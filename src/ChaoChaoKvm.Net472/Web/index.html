@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'"><title>吵吵 KVM</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="icons.css"><link rel="stylesheet" href="cloudflare.css"></head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand-lockup"><span class="brand-mark" aria-hidden="true"></span><div class="wordmark">吵吵 <span>KVM</span><small>你的遠端工作空間</small></div></div>
+    <nav aria-label="主要導覽">
+      <button class="nav" data-page="devices"><span class="nav-symbol nav-icon-devices" aria-hidden="true"></span>裝置中心</button>
+      <button id="nav-online" class="nav" data-page="online" hidden><span class="nav-symbol nav-icon-online" aria-hidden="true"></span>Online 連線</button>
+      <button id="nav-cloudflare" class="nav" data-page="cloudflare" hidden><span class="nav-symbol nav-icon-online" aria-hidden="true">↗</span>網路連線</button>
+      <button class="nav active" data-page="connect" aria-current="page"><span class="nav-symbol nav-icon-remote" aria-hidden="true"></span>遠端連線</button>
+      <button class="nav" data-page="files"><span class="nav-symbol nav-icon-files" aria-hidden="true"></span>檔案傳輸</button>
+      <button class="nav" data-page="settings"><span class="nav-symbol nav-icon-settings" aria-hidden="true"></span>偏好設定</button>
+    </nav>
+    <div class="sidebar-bottom"><div class="local-avatar" aria-hidden="true">本</div><div><strong id="sidebar-machine">本機電腦</strong><small id="sidebar-status">正在啟動</small></div></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><span id="breadcrumb">工作空間 <span class="slash">/</span> 遠端連線</span><span class="status-pill" role="status"><i id="status-dot"></i><span id="status-label">正在啟動</span></span></header>
+    <main>
+      <div id="preview-banner" class="notice" hidden>介面預覽 · 連線、傳檔與控制需由桌面程式執行。</div>
+      <div id="fatal" class="error" role="alert" hidden></div>
+      <section id="page-devices" class="page" hidden>
+        <div class="page-heading"><div><h1>所有電腦，都在同一個地方。</h1><p>分群、標籤、收藏，並用分頁同時管理多個遠端工作階段。</p></div><button id="show-device-editor" class="primary">＋ 新增裝置</button></div>
+        <div id="session-strip" class="session-strip" hidden></div>
+        <div class="device-hub-grid">
+          <aside class="group-panel">
+            <div class="group-title"><strong>群組</strong><span id="device-count">0 台</span></div>
+            <button class="group-item active" data-group="__all">全部裝置</button>
+            <button class="group-item" data-group="__favorite">★ 我的最愛</button>
+            <div id="group-list"></div>
+            <form id="group-form" class="group-form"><input id="group-name" placeholder="新增群組" autocomplete="off"><button type="submit" aria-label="新增群組">＋</button></form>
+          </aside>
+          <div class="device-hub-main">
+            <section id="device-editor" class="device-editor" hidden>
+              <div class="editor-heading"><div><h2 id="device-editor-title">新增裝置</h2><p>裝置名稱是顯示名稱；IP 使用目前 LAN 位址。</p></div><button id="close-device-editor" class="icon-button" type="button">關閉</button></div>
+              <form id="device-form" class="device-form">
+                <input id="device-id" type="hidden">
+                <input id="device-mode" type="hidden" value="lan">
+                <label>名稱<input id="device-name" required placeholder="例如 DIA AOI-03"></label>
+                <label><span id="device-address-label">IP 位址</span><input id="device-ip" required placeholder="192.168.1.30" inputmode="decimal"></label>
+                <label>群組<select id="device-group"></select></label>
+                <label>標籤<input id="device-tags" placeholder="DIA, AOI, 3F"></label>
+                <label class="favorite-check"><input id="device-favorite" type="checkbox"> ★ 加入我的最愛</label>
+                <div class="editor-actions"><button type="button" id="delete-device" class="secondary-button" hidden>刪除</button><button type="submit" class="primary">儲存裝置</button></div>
+              </form>
+            </section>
+            <div class="device-toolbar"><div><strong id="device-filter-title">全部裝置</strong><span id="device-filter-detail">依群組整理你的遠端電腦</span></div><input id="device-search" placeholder="搜尋名稱、IP 或標籤" autocomplete="off"></div>
+            <div id="device-grid" class="device-grid"></div>
+            <div id="device-empty" class="device-empty"><span>▦</span><strong>還沒有符合條件的裝置</strong><p>新增第一台電腦，或切換其他群組。</p></div>
+          </div>
+        </div>
+      </section>
+      <section id="page-online" class="page" hidden>
+        <div class="page-heading"><div><h1>把遠端桌面，帶出區域網路。</h1><p>Online 版使用獨立 ngrok TCP 通道，並以 KVM 專用連線碼驗證。</p></div><span class="online-badge">ONLINE</span></div>
+        <div class="online-grid">
+          <section class="panel online-host-card">
+            <div class="section-label"><span class="step">01</span>讓別台電腦連到這台</div>
+            <h2>你的 Online 入口</h2>
+            <p class="secondary">程式會使用 ChaoMCPHub 已配置的 ngrok 環境，不會共用 MCP 固定網域。</p>
+            <div class="online-status-row"><i id="online-dot"></i><div><strong id="online-status">正在準備 ngrok</strong><span id="online-url">尚未取得公開網址</span></div></div>
+            <label for="online-local-code">本機連線碼</label>
+            <textarea id="online-local-code" rows="4" readonly placeholder="ngrok 連線完成後會產生連線碼"></textarea>
+            <div class="button-group online-actions"><button id="online-copy-code" class="primary">複製連線碼</button><button id="online-restart" class="secondary-button">重新建立通道</button><button id="online-stop" class="secondary-button">停止 Online</button></div>
+            <p class="online-security-note">連線碼包含存取金鑰，請只傳給要控制這台電腦的人。停止 Online 後，公開入口會立即失效。</p>
+          </section>
+          <section class="panel online-connect-card">
+            <div class="section-label"><span class="step">02</span>連到網路上的另一台 KVM</div>
+            <h2>貼上對方的連線碼</h2>
+            <p class="secondary">不用知道對方的公網 IP，也不需要路由器開 Port。</p>
+            <label for="online-peer-code">遠端連線碼</label>
+            <textarea id="online-peer-code" rows="6" placeholder="CKO1. ..." spellcheck="false"></textarea>
+            <p id="online-connect-error" class="inline-error" role="alert"></p>
+            <button id="online-connect-button" class="primary online-connect-button">開啟 Online 遠端桌面 ↗</button>
+            <p class="online-pair-note">第一次成功配對後會自動加入裝置中心；之後不用再貼連線碼。</p>
+            <button class="text-button" data-page="devices">前往裝置中心 →</button>
+          </section>
+        </div>
+        <div class="bottom-note"><span id="online-port-note">Online KVM 使用獨立本機服務，不影響 LAN 版 HTTP 8001。</span><span>傳輸層：ngrok TCP + Chao access key</span></div>
+      </section>
+            <section id="page-cloudflare" class="page" hidden>
+        <div class="page-heading"><div><h1>遠端連線，簡單兩步。</h1><p>不用設定 IP 或路由器。讓對方輸入你分享的連線碼，就能連回這台電腦。</p></div><span class="quiet-label">網路連線</span></div>
+        <div class="simple-remote-grid">
+          <section class="panel simple-remote-card">
+            <div class="section-label"><span class="step">01</span>讓對方連到這台電腦</div>
+            <h2>分享一組連線碼</h2>
+            <p class="secondary">按下按鈕啟用遠端連線，再把連線碼傳給可信任的人。</p>
+            <div class="online-status-row simple-remote-status"><i id="cf-relay-dot"></i><div><strong id="cf-relay-status">尚未啟用</strong><span id="cf-relay-detail">準備就緒</span></div></div>
+            <button id="cf-relay-start" class="primary simple-main-action">啟用遠端連線</button>
+            <div id="simple-host-code-wrap" class="simple-code-wrap" hidden>
+              <label for="cf-relay-code">你的連線碼</label>
+              <textarea id="cf-relay-code" rows="3" readonly placeholder="連線啟用後會自動產生"></textarea>
+              <div class="button-group simple-code-actions"><button id="cf-relay-copy" class="secondary-button">複製連線碼</button><button id="cf-relay-stop" class="text-button">停止分享</button></div>
+            </div>
+            <p class="simple-remote-hint">第一次使用時會開啟瀏覽器，完成登入後程式會自動繼續。只把連線碼分享給你信任的人。</p>
+            <span id="cf-relay-clients" class="subtle-tag" hidden>0 個連線</span>
+            <input id="cf-relay-hostname" type="hidden" value="kvm-relay.chaochao.win">
+            <button id="cf-relay-save" type="button" hidden>儲存</button>
+          </section>
+          <section class="panel simple-remote-card">
+            <div class="section-label"><span class="step">02</span>連到另一台電腦</div>
+            <h2>輸入對方的連線碼</h2>
+            <p class="secondary">請對方在吵吵 KVM 的「網路連線」頁面複製連線碼，再貼在下方。</p>
+            <label for="cf-relay-peer-code">對方的連線碼</label>
+            <textarea id="cf-relay-peer-code" rows="4" placeholder="在此貼上對方傳來的連線碼" spellcheck="false"></textarea>
+            <p id="cf-relay-connect-error" class="inline-error" role="alert"></p>
+            <button id="cf-relay-connect" class="primary simple-main-action">連線到對方電腦 ↗</button>
+            <p class="simple-remote-hint">成功連線後，會在遠端桌面分頁中開啟。</p>
+            <button id="cf-relay-stop-clients" class="secondary-button" hidden>停止目前連線</button>
+          </section>
+        </div>
+        <div class="simple-remote-footer"><span>區域網路連線仍照常使用，不需要更改原有設定。</span><span id="cf-relay-hidden-status" hidden></span></div>
+      </section>
+      <section id="page-connect" class="page">
+        <div class="page-heading"><div><h1>讓距離，留在螢幕之外。</h1><p>連上另一台電腦，回到熟悉的工作。</p></div><span class="quiet-label">遠端連線</span></div>
+        <div class="connection-grid">
+          <section class="connect-card">
+            <div class="section-label"><span class="step">01</span>連到另一台電腦</div>
+            <h2>你的下一個工作畫面。</h2>
+            <p class="secondary">輸入對方的區域網路 IP，開始連線。</p>
+            <form id="connect-form" novalidate>
+              <label for="peer-ip">遠端電腦位址</label>
+              <div class="address-field"><input id="peer-ip" name="peer-ip" placeholder="例如 192.168.1.20" autocomplete="off" spellcheck="false" aria-describedby="connect-error"><button type="submit" id="connect-button" class="primary">連線 <span aria-hidden="true">↗</span></button></div>
+              <p id="connect-error" class="inline-error" role="alert"></p>
+            </form>
+            <div class="remember-note"><span aria-hidden="true">↺</span>下次開啟時，會自動嘗試已記住的電腦。</div>
+          </section>
+          <section class="local-card">
+            <div class="section-label"><span class="step">02</span>讓對方連到本機</div>
+            <h2 id="machine">本機電腦</h2><p class="secondary">把本機位址提供給另一端。</p>
+            <div class="local-address"><div><label class="field-label" for="local-ip">本機 IP 位址</label><select id="local-ip" aria-label="選擇要提供給對方的本機位址"><option value="">讀取中</option></select></div><button id="copy-ip" class="icon-button" aria-label="複製所選的本機 IP" title="複製位址">複製</button></div>
+            <div class="permission-row"><div><label for="allow-control">允許對方控制本機</label><p id="permission-help">關閉後仍可連線與觀看畫面。</p></div><label class="switch"><input id="allow-control" type="checkbox" aria-label="允許對方控制本機"><span></span></label></div>
+          </section>
+        </div>
+        <section class="device-section"><div class="section-heading"><h2>已記住的電腦</h2><span>繼續上次的工作</span></div>
+          <div id="empty-peer" class="empty-row"><span class="empty-mark" aria-hidden="true">↗</span><div><strong>你的第一台遠端電腦，從這裡開始。</strong><p>完成第一次連線後，位址會保留在這裡。</p></div></div>
+          <div id="peer-row" class="device-row" hidden><div class="device-icon" aria-hidden="true">▣</div><div class="device-info"><strong id="peer-name">遠端電腦</strong><span id="peer-address"></span></div><div class="device-state"><i id="peer-dot"></i><span id="peer-state">等待連線</span></div><button id="open-session" class="secondary-button">開啟遠端桌面 <span aria-hidden="true">↗</span></button></div>
+        </section>
+        <div class="bottom-note"><span>兩台電腦，使用同一支吵吵 KVM。</span><button class="text-button" data-page="settings">連線有問題？查看診斷 <span aria-hidden="true">→</span></button></div>
+      </section>
+      <section id="page-files" class="page" hidden>
+        <div class="page-heading"><div><h1>把檔案，送到另一端。</h1><p>檔案與資料夾，都在同一個工作空間流動。</p></div></div>
+        <section class="panel file-panel"><span class="file-glyph" aria-hidden="true">⇄</span><h2>選擇你要傳送的內容</h2><p id="file-peer" class="secondary">連線後即可傳送檔案。</p><div class="button-group"><button id="send-files" class="primary">選擇檔案</button><button id="send-folder" class="secondary-button">選擇資料夾</button></div><div id="transfer-status" class="transfer-status" role="status">尚無進行中的傳輸</div></section>
+        <section class="settings-row"><div><h3>收到的檔案</h3><p id="receive-path">檔案會儲存至本機收件資料夾。</p></div><button id="open-received" class="secondary-button">開啟收件資料夾 ↗</button></section>
+      </section>
+      <section id="page-settings" class="page" hidden>
+        <div class="page-heading"><div><h1>剛剛好的工作節奏。</h1><p>常用設定留在這裡，專注留給遠端畫面。</p></div></div>
+        <section class="panel settings-panel"><h2>介面字級</h2><p class="secondary">依使用距離調整可讀性；預設使用舒適字級。</p><div class="settings-row"><div><h3>文字大小</h3><p>只調整介面文字與控制元件，不會改變遠端桌面本身的縮放。</p></div><div class="text-size-control" role="group" aria-label="介面字級"><button type="button" data-text-size="standard">標準</button><button type="button" data-text-size="comfortable">舒適</button><button type="button" data-text-size="large">大字</button></div></div></section>
+        <section class="panel settings-panel"><h2>本機送出的畫面</h2><p class="secondary">調整另一端看到的流暢度與清晰度；不會改變對方送來的畫質。</p><div class="settings-row"><div><h3>畫面更新頻率</h3><p>較高的更新頻率會使用更多網路流量。</p></div><div class="range-control"><input id="fps" type="range" min="2" max="20" step="1" aria-label="本機畫面更新頻率"><output id="fps-value" for="fps">10 FPS</output></div></div><div class="settings-row"><div><h3>畫面清晰度</h3><p>網路較慢時，可以降低清晰度。</p></div><div class="range-control"><input id="quality" type="range" min="25" max="85" step="5" aria-label="本機 JPEG 畫面品質"><output id="quality-value" for="quality">55%</output></div></div></section>
+        <section class="panel settings-panel"><h2>操作方式</h2><div class="settings-row"><div><h3>遠端桌面直接操作</h3><p>畫面連上後，滑鼠移入即可操作；點一下畫面即可輸入鍵盤，不需要再切換控制模式。</p></div><span class="subtle-tag">直接操作</span></div><div class="settings-row"><div><h3>隨時暫停遠端輸入</h3><p>立即釋放遠端按鍵與滑鼠；再次點擊遠端畫面即可繼續。</p></div><kbd>Ctrl + Alt + Esc</kbd></div></section>
+        <details class="panel diagnostics"><summary>連線診斷 <span>技術資訊與近期紀錄</span></summary><dl><dt>通訊狀態</dt><dd id="route">等待桌面程式</dd><dt>Agent API</dt><dd id="agent-api">—</dd></dl><button id="retry" class="secondary-button">重新嘗試連線</button><pre id="logs" aria-label="近期診斷紀錄">尚無紀錄</pre></details>
+      </section>
+    </main>
+    <footer><span>ChaoChao KVM</span><span>專注眼前，自在連線。</span></footer>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" hidden></div>
+<script src="app.js"></script>
+</body></html>

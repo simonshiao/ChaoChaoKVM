@@ -1,0 +1,96 @@
+<Window x:Class="ChaoChaoKvm.MultiSessionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="多重遠端桌面 · 吵吵 KVM"
+        Width="1380" Height="860" MinWidth="900" MinHeight="600"
+        Background="#F3F6FA" FontFamily="Segoe UI, Microsoft JhengHei UI"
+        WindowStartupLocation="CenterScreen"
+        PreviewKeyDown="OnKeyDown" PreviewKeyUp="OnKeyUp">
+    <Window.Resources>
+        <Style x:Key="ToolButton" TargetType="Button">
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="MinWidth" Value="60"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="Foreground" Value="#34465C"/>
+            <Setter Property="BorderBrush" Value="#E4EAF1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="surface" Property="Background" Value="#EAF2FC"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="surface" Property="Background" Value="#D6E7FA"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="surface" Property="Opacity" Value=".45"/></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="surface" Property="BorderBrush" Value="#357FDB"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="TabButton" TargetType="Button" BasedOn="{StaticResource ToolButton}">
+            <Setter Property="MinWidth" Value="72"/>
+            <Setter Property="MaxWidth" Value="175"/>
+            <Setter Property="Foreground" Value="#5C6F85"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+    </Window.Resources>
+    <Grid x:Name="ChromeRoot">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="56"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <!-- The entire remote toolbar is one fixed row outside the captured desktop. -->
+        <Border x:Name="SessionToolbar" Grid.Row="0" Background="#F9FBFD" BorderBrush="#D8E0E9" BorderThickness="0,0,0,1" Padding="9,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="160"/>
+                    <ColumnDefinition Width="*" MinWidth="90"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" x:Name="BackButton" Style="{StaticResource ToolButton}" Content="← 返回" Click="CloseView" ToolTip="返回 KVM 主畫面（本機分享服務會繼續運作）"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,8,0">
+                    <TextBlock x:Name="PeerName" Text="遠端桌面" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" Foreground="#202D3E"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                        <Ellipse x:Name="StatusDot" Fill="#A0AAB8" Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SessionStatus" Text="等待連線" FontSize="11" Foreground="#66788C" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </StackPanel>
+                <DockPanel Grid.Column="2" LastChildFill="True" VerticalAlignment="Center" Margin="2,0,6,0">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource ToolButton}" Content="＋" Width="32" MinWidth="32" Padding="0" Click="OpenDeviceCenter" ToolTip="選擇其他裝置"/>
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" VerticalAlignment="Center">
+                        <StackPanel x:Name="SessionTabsPanel" Orientation="Horizontal"/>
+                    </ScrollViewer>
+                </DockPanel>
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="RetryButton" Style="{StaticResource ToolButton}" Content="⟳ 重連" Click="RetryActiveSession" ToolTip="重新嘗試連線目前的遠端電腦"/>
+                    <Button Style="{StaticResource ToolButton}" Content="⇄ 檔案" Click="OpenFiles" ToolTip="返回檔案傳輸頁面"/>
+                    <Button Style="{StaticResource ToolButton}" Content="⚙ 設定" Click="OpenSettings" ToolTip="開啟連線與畫質設定"/>
+                    <Button x:Name="FullScreenButton" Style="{StaticResource ToolButton}" Content="⛶ 全螢幕" Click="ToggleFullScreen" ToolTip="全螢幕顯示遠端桌面"/>
+                    <Button x:Name="ControlButton" Style="{StaticResource ToolButton}" Content="控制中" Click="ToggleReadOnly" ToolTip="切換唯讀／控制模式"/>
+                    <Button x:Name="EndSessionButton" Style="{StaticResource ToolButton}" Content="關閉分頁 ×" Click="EndActiveSession" ToolTip="只關閉目前遠端分頁；本機分享服務持續運作"
+                            Foreground="#B74444" BorderBrush="#F0D7D7"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        <Grid Grid.Row="1" x:Name="Viewer" Focusable="True" ClipToBounds="True" Background="#F3F6FA"
+              MouseMove="MovePointer" MouseDown="DownPointer" MouseUp="UpPointer" MouseWheel="WheelPointer">
+            <Image x:Name="RemoteImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+            <Border x:Name="EmptyPanel" Background="#F7F9FC" IsHitTestVisible="False">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock x:Name="EmptyTitle" Text="選擇一台遠端電腦" FontSize="21" FontWeight="SemiBold" Foreground="#26364A" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="EmptyDetail" Text="從裝置中心選取電腦，連線畫面會出現在這裡。" Margin="0,12,0,0" Foreground="#718096" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

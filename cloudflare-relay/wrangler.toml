@@ -1,0 +1,19 @@
+name = "chaokvm-relay"
+main = "src/index.ts"
+compatibility_date = "2026-10-26"
+workers_dev = false
+
+[[routes]]
+pattern = "kvm-relay.chaochao.win"
+custom_domain = true
+
+[[durable_objects.bindings]]
+name = "RELAY_ROOMS"
+class_name = "KvmRelayRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["KvmRelayRoom"]
+
+[vars]
+ACCESS_EMAIL = "Juhnhoom@gmail.com"

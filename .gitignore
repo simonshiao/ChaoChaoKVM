@@ -1,0 +1,39 @@
+# Build and release output
+**/bin/
+**/obj/
+**/node_modules/
+**/.wrangler/
+**/.wrangler-dry-run/
+/dist-*/
+/tests/*-build/
+
+# Local IDE and runtime state
+.vs/
+.idea/
+*.user
+*.suo
+*.log
+*.tmp
+
+# Local credentials and machine-specific settings
+ngrok-kvm.yml
+AI_API_TEST.txt
+.env
+.env.*
+!.env.example
+**/.dev.vars
+**/*.exe.config
+
+# Compiled applications and bundled runtimes
+*.exe
+*.dll
+*.pdb
+*.nlp
+*.hyb
+*.cache
+
+# Historical packaged snapshots
+/docs/*backup*/
+
+# Bundled WebView2 documentation
+/Microsoft.Web.WebView2.*.xml

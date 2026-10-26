@@ -1,0 +1,11 @@
+{
+  "name": "chaokvm-cloudflare-relay",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "check": "wrangler deploy --dry-run --outdir .wrangler-dry-run"
+  },
+  "devDependencies": {
+    "wrangler": "^4.45.0"
+  }
+}

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{D4A1AFA1-6AA4-4CB5-9C3C-1EC6B70E2A91}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <RootNamespace>ChaoChaoKvm</RootNamespace>
+    <AssemblyName>ChaoChaoKvmOnline</AssemblyName>
+    <ApplicationIcon>..\..\..\..\6.模板與共用資源區\Icons\01_ICO\Chao_001.ico</ApplicationIcon>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <WebView2Package Condition=" '$(WebView2Package)' == '' ">$(UserProfile)\.nuget\packages\microsoft.web.webview2\1.0.3537.50</WebView2Package>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols><DebugType>full</DebugType><Optimize>false</Optimize>
+    <OutputPath>..\..\..\ChaoChaoKvm-Online\Debug\</OutputPath>
+    <IntermediateOutputPath>obj\OnlineDebug\</IntermediateOutputPath>
+    <DefineConstants>DEBUG;TRACE;ONLINE_BUILD</DefineConstants><WarningLevel>4</WarningLevel><PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugSymbols>false</DebugSymbols><DebugType>none</DebugType><Optimize>true</Optimize>
+    <OutputPath>..\..\..\ChaoChaoKvm-Online\</OutputPath>
+    <IntermediateOutputPath>obj\OnlineRelease\</IntermediateOutputPath>
+    <DefineConstants>TRACE;ONLINE_BUILD</DefineConstants><WarningLevel>4</WarningLevel><PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Web.WebView2.Core"><HintPath>$(WebView2Package)\lib\net462\Microsoft.Web.WebView2.Core.dll</HintPath><Private>True</Private></Reference>
+    <Reference Include="Microsoft.Web.WebView2.Wpf"><HintPath>$(WebView2Package)\lib\net462\Microsoft.Web.WebView2.Wpf.dll</HintPath><Private>True</Private></Reference>
+    <Reference Include="System" /><Reference Include="System.Core" /><Reference Include="System.Drawing" /><Reference Include="System.Security" /><Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Xaml" /><Reference Include="WindowsBase" /><Reference Include="PresentationCore" /><Reference Include="PresentationFramework" /><Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml"><Generator>MSBuild:Compile</Generator><SubType>Designer</SubType></ApplicationDefinition>
+    <Page Include="MainWindow.xaml"><Generator>MSBuild:Compile</Generator><SubType>Designer</SubType></Page>
+    <Compile Include="App.xaml.cs"><DependentUpon>App.xaml</DependentUpon></Compile>
+    <Compile Include="MainWindow.xaml.cs"><DependentUpon>MainWindow.xaml</DependentUpon></Compile>
+    <Page Include="SessionWindow.xaml"><Generator>MSBuild:Compile</Generator><SubType>Designer</SubType></Page>
+    <Compile Include="SessionWindow.xaml.cs"><DependentUpon>SessionWindow.xaml</DependentUpon></Compile>
+    <Page Include="MultiSessionWindow.xaml"><Generator>MSBuild:Compile</Generator><SubType>Designer</SubType></Page>
+    <Compile Include="MultiSessionWindow.xaml.cs"><DependentUpon>MultiSessionWindow.xaml</DependentUpon></Compile>
+    <Compile Include="Core\Protocol.cs" /><Compile Include="Core\JsonUtil.cs" /><Compile Include="Core\BuildFlavor.cs" /><Compile Include="Core\AppConfig.cs" />
+    <Compile Include="Core\DeviceLibraryStore.cs" /><Compile Include="Core\NetworkUtils.cs" /><Compile Include="Core\ChaoTransferDiscovery.cs" /><Compile Include="Core\PacketCodec.cs" /><Compile Include="Core\HttpWire.cs" />
+    <Compile Include="Services\ScreenCaptureService.cs" /><Compile Include="Services\InputInjectionService.cs" /><Compile Include="Services\PeerSession.cs" />
+    <Compile Include="Services\HttpPeerServer.cs" /><Compile Include="Services\HttpPeerClient.cs" /><Compile Include="Services\RemotePeerSession.cs" /><Compile Include="Services\KvmPeerManager.cs" /><Compile Include="Services\NgrokTunnelService.cs" /><Compile Include="Services\OnlineRegistryClient.cs" /><Compile Include="Services\CloudflareTunnelService.cs" /><Compile Include="Services\CloudflareSettingsStore.cs" />
+    <Compile Include="Api\LocalAgentApi.cs" />
+  </ItemGroup>
+  <ItemGroup><None Include="app.config" /></ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="CopyDesktopWebAssets" AfterTargets="Build">
+    <ItemGroup><DesktopWebAsset Include="Web\**\*" /></ItemGroup>
+    <Copy SourceFiles="@(DesktopWebAsset)" DestinationFiles="@(DesktopWebAsset->'$(OutputPath)Web\%(RecursiveDir)%(Filename)%(Extension)')" />
+    <Copy SourceFiles="$(WebView2Package)\runtimes\win-x64\native\WebView2Loader.dll" DestinationFolder="$(OutputPath)runtimes\win-x64\native" />
+    <Copy SourceFiles="$(WebView2Package)\runtimes\win-x86\native\WebView2Loader.dll" DestinationFolder="$(OutputPath)runtimes\win-x86\native" />
+    <Copy SourceFiles="$(WebView2Package)\runtimes\win-arm64\native\WebView2Loader.dll" DestinationFolder="$(OutputPath)runtimes\win-arm64\native" />
+  </Target>
+</Project>

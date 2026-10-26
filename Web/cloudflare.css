@@ -1,0 +1,5 @@
+.cf-field{display:block;width:100%;margin-top:8px;padding:12px 13px;border:1px solid #d5e0eb;border-radius:11px;background:#f9fbfd;color:#30445a;font:13px Consolas,"Segoe UI",sans-serif;outline:none}
+.cf-field:focus{border-color:#86b3e0;box-shadow:0 0 0 3px #1768c512}
+#cf-relay-copy:disabled,#cf-relay-stop:disabled{opacity:.55;cursor:not-allowed}
+#cf-relay-dot{display:block;width:9px;height:9px;border-radius:50%;background:#a9b4c0}
+#cf-relay-dot.online{background:#2aa574;box-shadow:0 0 0 4px #2aa57420}
