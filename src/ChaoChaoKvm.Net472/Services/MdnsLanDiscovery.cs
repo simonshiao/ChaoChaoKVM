@@ -326,7 +326,7 @@ namespace ChaoChaoKvm.Services
                     Guid parsed;
                     if (state.LastSeenUtc == DateTime.MinValue || now - state.LastSeenUtc > TimeSpan.FromSeconds(75) ||
                         !Guid.TryParseExact(state.Id, "N", out parsed) || state.Version != "1" ||
-                        state.Port < 1025 || state.Port > 65535 || !ValidDisplayName(state.Name) || string.IsNullOrEmpty(state.Host)) continue;
+                        state.Port < 1 || state.Port > 65535 || !ValidDisplayName(state.Name) || string.IsNullOrEmpty(state.Host)) continue;
                     Dictionary<string, DateTime> addresses;
                     if (!_addresses.TryGetValue(state.Host, out addresses)) continue;
                     foreach (KeyValuePair<string, DateTime> address in addresses.Where(a => a.Value > now))

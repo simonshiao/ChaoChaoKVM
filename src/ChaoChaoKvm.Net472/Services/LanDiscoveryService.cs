@@ -117,7 +117,7 @@ namespace ChaoChaoKvm.Services
                     int port = JsonUtil.GetInt(packet, "port", 0);
                     if (JsonUtil.GetString(packet, "service", "") != Marker || (kind != "query" && kind != "reply") ||
                         !Guid.TryParseExact(id, "N", out parsed) || id == _id || name.Length == 0 || name.Length > 128 ||
-                        name.Any(char.IsControl) || port < 1025 || port > 65535) continue;
+                        name.Any(char.IsControl) || port < 1 || port > 65535) continue;
                     string ip = source.Address.ToString();
                     if (!_isLocal(ip))
                     {
@@ -155,7 +155,7 @@ namespace ChaoChaoKvm.Services
         {
             Guid parsed;
             if (peer == null || _isLocal(peer.Ip) || !NetworkUtils.IsPrivateOrLinkLocal(peer.Ip) ||
-                peer.Port < 1025 || peer.Port > 65535 || !Guid.TryParseExact(peer.Id, "N", out parsed)) return;
+                peer.Port < 1 || peer.Port > 65535 || !Guid.TryParseExact(peer.Id, "N", out parsed)) return;
             lock (_sync)
             {
                 Expire();
@@ -178,9 +178,9 @@ namespace ChaoChaoKvm.Services
 
         public object[] Snapshot()
         {
-            return Peers().Where(p => p.Port == _httpPort).GroupBy(p => p.Id).Select(g => g.First())
+            return Peers().GroupBy(p => p.Id).Select(g => g.OrderBy(p => p.Port == _httpPort ? 0 : 1).First())
                 .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(p => (object)new { id = p.Id, name = p.Name, ip = p.Ip, port = p.Port }).ToArray();
+                .Select(p => (object)new { id = p.Id, name = p.Name, ip = p.Ip, port = p.Port, compatible = p.Port == _httpPort }).ToArray();
         }
 
         public Task<LanPeerAddress> ResolveAsync(string target, CancellationToken cancellation)

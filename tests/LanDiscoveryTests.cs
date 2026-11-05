@@ -84,8 +84,13 @@ internal static class LanDiscoveryTests
                     {
                         differentPort.Start(); controller.SendQuery(new IPEndPoint(_bind, differentPort.BoundPort));
                         Wait(() => controller.Peers().Any(p => p.Name == "OTHER-PORT"), "discovery records an explicitly advertised port");
+                        Check(JsonUtil.Serialize(controller.Snapshot()).Contains("OTHER-PORT") &&
+                            JsonUtil.Serialize(controller.Snapshot()).Contains("compatible"), "incompatible ports remain visible in nearby list");
                         Error(() => controller.Resolve("OTHER-PORT", CancellationToken.None), "不同的連線埠");
                     }
+                    Packet(controller.BoundPort, new { service = "CHAO_KVM_DISCOVERY_V1", kind = "reply", id = Guid.NewGuid().ToString("N"), name = "OLD-PORT-80", port = 80 });
+                    Wait(() => controller.Peers().Any(p => p.Name == "OLD-PORT-80"), "legacy port 80 is discoverable but not connectable");
+                    Error(() => controller.Resolve("OLD-PORT-80", CancellationToken.None), "不同的連線埠");
                     int count = controller.Peers().Length;
                     Packet(controller.BoundPort, new { service = "OTHER_APP", kind = "reply", id = Guid.NewGuid().ToString("N"), name = "INVALID", port = server.Port });
                     Packet(controller.BoundPort, new { service = "CHAO_KVM_DISCOVERY_V1", kind = "reply", id = "not-an-id", name = "INVALID", port = server.Port });

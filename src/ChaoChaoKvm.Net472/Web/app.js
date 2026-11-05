@@ -122,8 +122,10 @@
     $('nearby-list').replaceChildren(...peers.map(peer=>{
       const button=document.createElement('button'); button.type='button'; button.className='nearby-peer';
       const name=document.createElement('strong'), address=document.createElement('span');
-      name.textContent=peer.name; address.textContent=peer.ip+' · HTTP '+peer.port; button.append(name,address);
-      button.addEventListener('click',()=>{if(busy)return;$('peer-ip').value=peer.ip;$('connect-form').requestSubmit();}); return button;
+      const compatible=peer.compatible!==false;
+      name.textContent=peer.name; address.textContent=peer.ip+' · HTTP '+peer.port+(compatible?'':' · 埠號不相容，請更新對方 KVM'); button.append(name,address);
+      button.disabled=!compatible; if(!compatible)button.title='請將對方 KVM 更新為 HTTP 8001 的 Recovery 新版';
+      button.addEventListener('click',()=>{if(busy||!compatible)return;$('peer-ip').value=peer.ip;$('connect-form').requestSubmit();}); return button;
     }));
   }
   function renderDeviceCenter() {
