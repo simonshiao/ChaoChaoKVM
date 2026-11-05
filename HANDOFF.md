@@ -2,6 +2,7 @@
 
 ## 2026-11-05｜Cloudflare 跨網路遠端接續
 
+- 2026-11-05 新需求：TW 位於無法使用 Google 的網路，使用者要求不再由 `cloudflared access login` 跳 Google。已在 KVM 原始碼加入 **Cloudflare Access Service Token** 模式：雙端憑證各自 DPAPI 加密存入既有 `cloudflare.json`，CCF2 WebSocket 以兩個 Cloudflare Access Service Auth headers 驗證，保留舊瀏覽器登入相容路線；網路連線 UI 增加設定／清除入口。實際 Cloudflare 後台仍需要對 `kvm-relay.chaochao.win` 設定 Service Auth Policy、建立兩台分開的 Client ID／Secret；憑證不可在對話／Git 中傳送。未配置憑證、未驗證 WebSocket 101 前不可宣稱跨網成功。
 - 2026-11-05 雙端更新實測：HOME-1 PID 41632、TW PID 45548，均為相同 SHA-256 的 Recovery EXE，HTTP 8001 與 loopback Agent API 45889 皆監聽。兩端 Computer Use 都已取得對方即時 1920×1080 影格；TW 使用 `py -3.12 -B tools\kvm_computer.py` 成功擷取 HOME-1 JPEG 並解碼。TW Python 確實已安裝在 `D:\Python312\python.exe`（3.12.9），是 WindowsApps 的 `python` 命令別名誤導，不應新增重複 Python Runtime。
 - 2026-11-05 Cloudflare 雙端實測：兩端 `tools/check_cloudflare.ps1` 通過工具簽章／HTTP 預檢，但 `cloudflared access token -app=https://kvm-relay.chaochao.win` 兩端均 exit 1、未取得可用 JWT。兩端直接對 `wss://kvm-relay.chaochao.win/relay` 進行未授權 WebSocket 握手，均收到 HTTP **200（Cloudflare Access 登入頁）而非 101**，因此 **CCF2 Relay 尚未驗收**，也尚無法確認 Access 之後的 Relay backend。下一步在兩台各以 `cloudflared.exe access login https://kvm-relay.chaochao.win` 互動登入，取得 token 後重新驗證真實 CCF2 WebSocket 與畫面傳輸。未測試中國大陸實網，不可宣稱跨境可用。
 - 使用者目標：**只修 ChaoChaoKvm**，讓中國大陸網路可透過 Cloudflare 作為 Google 遠端的備援；暫不修改 CHAO Agent／MCP。

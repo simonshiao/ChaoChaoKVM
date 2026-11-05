@@ -4,6 +4,10 @@ Recovery Cloudflare 版保留 LAN 版 HTTP 8001。Cloudflare 遠端連線與 LAN
 
 ## 2026-11-05 現行版：先驗證 CCF2 HTTPS 中繼
 
+- **無 Google／中國大陸環境的建議驗證方式（Service Token）**：在可登入 Cloudflare 控制台的電腦，進入 Zero Trust → Access controls → Service credentials → Service Tokens，建立 HOME-1 與 TW 各自的 Token；到 `kvm-relay.chaochao.win` 所在的 **Self-hosted Access Application** 設定 `Service Auth` 政策，僅 Include 這兩個 Token。勿刪除其他必要的 Allow 政策，也不可設定 Bypass。
+- 在兩台新版 KVM 的 **網路連線 → Cloudflare 免 Google 登入設定** 分別輸入自己的 Client ID 與 Client Secret，按「儲存免登入憑證」。程式會使用 Windows DPAPI CurrentUser 加密儲存；UI 只回傳是否設定，不回傳憑證內容。之後 CCF2 Host／Client WebSocket 直接送 `CF-Access-Client-Id` 與 `CF-Access-Client-Secret`，不執行 `cloudflared access login`，也不嘗試 Google 登入。
+- 尚未設定 Service Token 的電腦維持原有 Access 瀏覽器登入模式。若 Cloudflare 政策未設定或憑證失效，應回報驗證錯誤，**不能自動降級成匿名連線／公開 Bypass**。Credential 並非 KVM 房間配對金鑰；CCF2 自身房間金鑰仍必須保留。
+- 原 Client Secret 僅在 Cloudflare 建立 Token 時顯示一次，請安全保存並勿貼給 Agent 聊天；可在 Cloudflare 控制台獨立停用或輪替憑證。Token 逾期後需更換。驗收必須實際得到 WebSocket HTTP 101 與遠端畫面；有了 Service Token 仍不能保證跨境網路可靠。
 - **目前 UI 的「網路連線／啟用遠端連線」是 CCF2 Relay 路線**：被控制端向 `wss://kvm-relay.chaochao.win/relay` 以 host 角色連線；控制端貼上 CCF2 連線碼後，建立 HTTPS／WebSocket 中繼，仍使用 KVM 既有畫面、鍵鼠、檔案協定。
 - 中繼必須有支援 CCF2 `OPEN/OPENED/FAILED`、房間配對及二進位串流的服務端，並以 **Cloudflare Access 的 hostname-based policy** 保護 WebSocket；只有登入頁回傳 HTTP 200 **無法證明** Relay Worker／Durable Object 或 WebSocket 101 握手成功。
 - 目前兩台 LAN 已驗證正常；HOME-1 與 TW 都能看到 `kvm-relay.chaochao.win` 的 Access 登入頁，但 CCF2 **尚未完成跨網路串流實測**，不能標示為已驗收。

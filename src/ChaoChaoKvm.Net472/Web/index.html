@@ -92,7 +92,21 @@
               <textarea id="cf-relay-code" rows="3" readonly placeholder="連線啟用後會自動產生"></textarea>
               <div class="button-group simple-code-actions"><button id="cf-relay-copy" class="secondary-button">複製連線碼</button><button id="cf-relay-stop" class="text-button">停止分享</button></div>
             </div>
-            <p class="simple-remote-hint">第一次使用時會開啟瀏覽器，完成登入後程式會自動繼續。只把連線碼分享給你信任的人。</p>
+            <p id="cf-relay-auth-hint" class="simple-remote-hint">首次使用需要 Cloudflare Access 驗證；也可改用 Service Token 免瀏覽器登入。只把連線碼分享給你信任的人。</p>
+            <details class="simple-remote-hint" id="cf-service-auth-settings">
+              <summary>Cloudflare 免 Google 登入設定（Service Token）</summary>
+              <p>在 Cloudflare Zero Trust 建立 Service Token，並在此網址的 Access Application 加入 Service Auth 政策。每台電腦各自設定一次，憑證會由 Windows 加密儲存。</p>
+              <p id="cf-service-auth-status">尚未設定</p>
+              <label for="cf-service-client-id">Client ID</label>
+              <input id="cf-service-client-id" class="cf-field" type="password" autocomplete="off" spellcheck="false" placeholder="貼上 Cloudflare Client ID">
+              <label for="cf-service-client-secret">Client Secret</label>
+              <input id="cf-service-client-secret" class="cf-field" type="password" autocomplete="off" spellcheck="false" placeholder="貼上 Cloudflare Client Secret">
+              <div class="button-group">
+                <button id="cf-service-auth-save" class="secondary-button" type="button">儲存免登入憑證</button>
+                <button id="cf-service-auth-clear" class="text-button" type="button">清除憑證</button>
+              </div>
+              <p class="secondary">已設定時不需要執行 cloudflared access login；請勿把憑證貼在聊天、Git 或連線碼中。</p>
+            </details>
             <span id="cf-relay-clients" class="subtle-tag" hidden>0 個連線</span>
             <input id="cf-relay-hostname" type="hidden" value="kvm-relay.chaochao.win">
             <button id="cf-relay-save" type="button" hidden>儲存</button>

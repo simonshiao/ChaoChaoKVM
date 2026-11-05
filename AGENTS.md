@@ -9,6 +9,7 @@
 - 這個專案的正式來源是 `src/ChaoChaoKvm.Net472`；正式發行為 `Release/Recovery`；不要把根目錄的舊 `Web` 當正式 Recovery UI。
 - **可攜版入口**：`Release/Recovery` 也會隨建置附上本檔、`docs/COMPUTER_USE.md` 與 `tools/kvm_computer.py`，讓複製整個 Release 資料夾的 Agent 能找到操作方式；僅有 Release 不等於包含原始碼，修改／重建請回正式來源專案。
 - **Cloudflare／跨網路**：先讀 `docs/CLOUDFLARE_RECOVERY.md`；可用 `powershell -NoProfile -File tools/check_cloudflare.ps1` 做不洩露 Token 的預檢。Cloudflare Access 登入頁正常不等於 KVM Relay 已完成 WebSocket 握手。不要把 CHAO MCP 的 Cloudflare 網址當 KVM 的服務端點。
+- **免 Google 登入**：KVM 新增 Cloudflare Service Token 模式，於 KVM「網路連線」頁設定，由 DPAPI 保存在各主機使用者資料；**不得**向使用者索取 Token 放進對話／Git／Log。Cloudflare Zero Trust 必須有指定 Service Token 的 Service Auth 政策，詳見 `docs/CLOUDFLARE_RECOVERY.md`。
 
 ## Agent 使用 Computer Use 的最短路徑
 

@@ -36,6 +36,8 @@ namespace ChaoChaoKvm.Services
         private Task _clientAcceptTask;
         private string _accessToken;
         private string _accessTokenHostname;
+        private string _serviceClientId = "";
+        private string _serviceClientSecret = "";
         private DateTime _accessTokenExpiresUtc;
         private string _detail = "Cloudflare HTTPS 中繼尚未啟動";
         private bool _hostConnected;
@@ -48,6 +50,27 @@ namespace ChaoChaoKvm.Services
         public bool HostConnected { get { lock (_sync) return HostRunning && _hostConnected; } }
         public int ClientCount { get { return _clientStreams.Count + _hostStreams.Count; } }
         public string Detail { get { lock (_sync) return _detail; } }
+
+        // Service Auth: 不需 Google/瀏覽器；由 Cloudflare Access 的 Service Auth Policy 驗證。
+        public void ConfigureServiceAuth(string clientId, string clientSecret)
+        {
+            clientId = (clientId ?? "").Trim();
+            clientSecret = (clientSecret ?? "").Trim();
+            if ((clientId.Length == 0) != (clientSecret.Length == 0))
+                throw new ArgumentException("Service Token 的 Client ID 和 Client Secret 必須成對設定。");
+            if (clientId.IndexOfAny(new[] { '\r', '\n' }) >= 0 || clientSecret.IndexOfAny(new[] { '\r', '\n' }) >= 0)
+                throw new ArgumentException("Service Token 不可包含換行字元。");
+            lock (_sync) { _serviceClientId = clientId; _serviceClientSecret = clientSecret; }
+        }
+
+        private async Task<ClientWebSocket> CreateAuthorizedSocketAsync(string hostname, CancellationToken cancellation)
+        {
+            string clientId, clientSecret;
+            lock (_sync) { clientId = _serviceClientId; clientSecret = _serviceClientSecret; }
+            if (clientId.Length > 0) return CreateSocket("", clientId, clientSecret);
+            string jwt = await GetAccessTokenAsync(hostname, cancellation).ConfigureAwait(false);
+            return CreateSocket(jwt, "", "");
+        }
 
         public void StartHost(string hostname, string roomId, string secret)
         {
@@ -107,8 +130,7 @@ namespace ChaoChaoKvm.Services
                 ClientWebSocket socket = null;
                 try
                 {
-                    string token = await GetAccessTokenAsync(hostname, cancellation).ConfigureAwait(false);
-                    socket = CreateSocket(token);
+                    socket = await CreateAuthorizedSocketAsync(hostname, cancellation).ConfigureAwait(false);
                     socket.Options.SetRequestHeader("X-KVM-Host-Key", secret);
                     Uri endpoint = BuildRelayUri(hostname, roomId, "host");
                     await socket.ConnectAsync(endpoint, cancellation).ConfigureAwait(false);
@@ -254,8 +276,7 @@ namespace ChaoChaoKvm.Services
             CancellationToken cancellation = streamCancellation.Token;
             try
             {
-                string token = await GetAccessTokenAsync(hostname, cancellation).ConfigureAwait(false);
-                socket = CreateSocket(token);
+                socket = await CreateAuthorizedSocketAsync(hostname, cancellation).ConfigureAwait(false);
                 socket.Options.SetRequestHeader("X-KVM-Pair-Key", secret);
                 await socket.ConnectAsync(BuildRelayUri(hostname, roomId, "client"), cancellation).ConfigureAwait(false);
                 ReceivedMessage ready = await ReceiveAsync(socket, cancellation).ConfigureAwait(false);
@@ -405,11 +426,16 @@ namespace ChaoChaoKvm.Services
             return DateTime.UtcNow.AddMinutes(15);
         }
 
-        private static ClientWebSocket CreateSocket(string accessToken)
+        private static ClientWebSocket CreateSocket(string accessToken, string serviceClientId, string serviceClientSecret)
         {
             ClientWebSocket socket = new ClientWebSocket();
             socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(20);
-            socket.Options.SetRequestHeader(AccessHeader, accessToken);
+            if (!string.IsNullOrEmpty(serviceClientId))
+            {
+                socket.Options.SetRequestHeader("CF-Access-Client-Id", serviceClientId);
+                socket.Options.SetRequestHeader("CF-Access-Client-Secret", serviceClientSecret);
+            }
+            else socket.Options.SetRequestHeader(AccessHeader, accessToken);
             IWebProxy proxy = CurrentUserProxy();
             if (proxy != null) socket.Options.Proxy = proxy;
             return socket;

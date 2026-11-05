@@ -64,13 +64,25 @@
     $('online-connect-error').textContent=''; send('onlineConnect',{code});
   });
   $('cf-relay-save').addEventListener('click', () => send('cloudflareRelaySave',{hostname:$('cf-relay-hostname').value.trim()}));
+  $('cf-service-auth-save').addEventListener('click', () => {
+    const clientId=$('cf-service-client-id').value.trim(), clientSecret=$('cf-service-client-secret').value.trim();
+    if(!clientId || !clientSecret) { toast('請同時輸入 Cloudflare Client ID 和 Client Secret。'); return; }
+    if(send('cloudflareServiceAuthSave',{clientId,clientSecret})) {
+      $('cf-service-client-id').value=''; $('cf-service-client-secret').value='';
+    }
+  });
+  $('cf-service-auth-clear').addEventListener('click', () => {
+    if(send('cloudflareServiceAuthClear')) {
+      $('cf-service-client-id').value=''; $('cf-service-client-secret').value='';
+    }
+  });
   let relayConnectTimer, relayStartTimer;
   $('cf-relay-start').addEventListener('click', () => {
     const button=$('cf-relay-start');
     if(button.disabled) return;
     button.disabled=true; button.textContent='正在啟用…';
     $('cf-relay-status').textContent='正在準備連線';
-    $('cf-relay-detail').textContent='首次使用會開啟瀏覽器完成登入，請稍候。';
+    $('cf-relay-detail').textContent=state.cloudflareRelay&&state.cloudflareRelay.serviceAuthConfigured?'正在使用 Service Token 驗證…':'首次使用會開啟瀏覽器完成登入，請稍候。';
     if(!send('cloudflareRelayStart',{hostname:$('cf-relay-hostname').value.trim()})) { button.disabled=false; button.textContent='啟用遠端連線'; $('cf-relay-status').textContent='尚未啟用'; }
     clearTimeout(relayStartTimer); relayStartTimer=setTimeout(() => { if(!(state.cloudflareRelay&&state.cloudflareRelay.running)) { button.disabled=false; button.textContent='啟用遠端連線'; $('cf-relay-status').textContent='尚未啟用'; $('cf-relay-detail').textContent='目前沒有連線回應，請再試一次或查看「連線診斷」。'; } }, 15000);
   });
@@ -81,7 +93,7 @@
     if(!code.startsWith('CCF2.')) { $('cf-relay-connect-error').textContent='請貼上完整的吵吵 KVM 網路連線碼。'; $('cf-relay-peer-code').focus(); return; }
     $('cf-relay-connect-error').textContent='';
     const button=$('cf-relay-connect'); button.disabled=true; button.textContent='正在連線…';
-    $('cf-relay-connect-error').textContent='正在建立連線，首次使用可能會先開啟瀏覽器登入。';
+    $('cf-relay-connect-error').textContent=state.cloudflareRelay&&state.cloudflareRelay.serviceAuthConfigured?'正在以 Service Token 建立中繼…':'正在建立連線，首次使用可能會先開啟瀏覽器登入。';
     if(!send('cloudflareConnect',{code})) { button.disabled=false; button.textContent='連線到對方電腦 ↗'; $('cf-relay-connect-error').textContent=''; return; }
     clearTimeout(relayConnectTimer); relayConnectTimer=setTimeout(() => { button.disabled=false; button.textContent='連線到對方電腦 ↗'; }, 15000);
   });
@@ -177,6 +189,8 @@
     $('online-dot').classList.toggle('online',Boolean(online.publicUrl));
     $('online-port-note').textContent='Online KVM 本機服務 Port '+(online.listenPort||18001)+'，不影響 LAN 版 HTTP 8001。';
     const relay=next.cloudflareRelay||{};
+    $('cf-service-auth-status').textContent=relay.serviceAuthConfigured?'已設定 Service Token；連線時不需要 Google 登入。':'尚未設定 Service Token；沿用瀏覽器登入。';
+    $('cf-relay-auth-hint').textContent=relay.serviceAuthConfigured?'Service Token 已設定，會自動驗證；只把連線碼分享給可信任的人。':'目前使用瀏覽器登入模式；可展開下方設定改用免 Google 登入。';
     if(document.activeElement!==$('cf-relay-hostname')) $('cf-relay-hostname').value=relay.hostname||'kvm-relay.chaochao.win';
     const relayDetail=relay.detail||'';
     $('cf-relay-status').textContent=relay.connected?'遠端連線已啟用':relay.running?'正在啟用遠端連線':'尚未啟用';

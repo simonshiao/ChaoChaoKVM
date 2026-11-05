@@ -71,6 +71,7 @@ namespace ChaoChaoKvm
                 _cloudflareSettings = CloudflareSettingsStore.Load();
                 _cloudflare = new CloudflareTunnelService();
                 _cloudflareRelay = new CloudflareRelayService();
+                _cloudflareRelay.ConfigureServiceAuth(_cloudflareSettings.AccessServiceClientId, _cloudflareSettings.AccessServiceClientSecret);
                 _cloudflare.Log += Log;
                 _cloudflare.Changed += delegate { OnUi(PublishState); };
                 _cloudflareRelay.Log += Log;
@@ -272,6 +273,14 @@ namespace ChaoChaoKvm
                         RequireCloudflare();
                         SaveRelayHostname(JsonUtil.GetString(data, "hostname", ""));
                         Toast("HTTPS 中繼設定已保存；連線碼金鑰由 Windows DPAPI 加密保存。"); break;
+                    case "cloudflareServiceAuthSave":
+                        RequireCloudflare();
+                        SaveCloudflareServiceAuth(JsonUtil.GetString(data, "clientId", ""), JsonUtil.GetString(data, "clientSecret", ""));
+                        Toast("Service Token 已安全保存；連線不再要求瀏覽器登入。"); break;
+                    case "cloudflareServiceAuthClear":
+                        RequireCloudflare();
+                        SaveCloudflareServiceAuth("", "");
+                        Toast("Service Token 已停用；下次連線會使用瀏覽器登入。"); break;
                     case "cloudflareRelayStart":
                         RequireCloudflare();
                         SaveRelayHostname(JsonUtil.GetString(data, "hostname", ""));
@@ -448,6 +457,9 @@ namespace ChaoChaoKvm
                     connected = _cloudflareRelay != null && _cloudflareRelay.HostConnected,
                     detail = _cloudflareRelay == null ? "" : _cloudflareRelay.Detail,
                     hostname = _cloudflareSettings == null ? "" : _cloudflareSettings.RelayHostname,
+                    serviceAuthConfigured = _cloudflareSettings != null &&
+                        !string.IsNullOrWhiteSpace(_cloudflareSettings.AccessServiceClientId) &&
+                        !string.IsNullOrWhiteSpace(_cloudflareSettings.AccessServiceClientSecret),
                     pairingCode = BuildFlavor.IsCloudflare ? CreateCloudflareRelayCode() : "",
                     clients = _cloudflareRelay == null ? 0 : _cloudflareRelay.ClientCount
                 }
@@ -474,6 +486,23 @@ namespace ChaoChaoKvm
             hostname = CloudflareTunnelService.NormalizeHostname(hostname);
             _cloudflareSettings.RelayHostname = hostname;
             CloudflareSettingsStore.Save(_cloudflareSettings);
+        }
+
+        private void SaveCloudflareServiceAuth(string clientId, string clientSecret)
+        {
+            clientId = (clientId ?? "").Trim();
+            clientSecret = (clientSecret ?? "").Trim();
+            if ((clientId.Length == 0) != (clientSecret.Length == 0))
+                throw new InvalidOperationException("請同時輸入 Client ID 與 Client Secret，或都留空清除。");
+            if (clientId.Length > 256 || clientSecret.Length > 256)
+                throw new InvalidOperationException("Service Token 長度超出限制。");
+            // 先確認憑證可設定，再持久化；不會將 Token 輸出到 GUI 狀態或診斷記錄。
+            _cloudflareRelay.ConfigureServiceAuth(clientId, clientSecret);
+            _cloudflareSettings.AccessServiceClientId = clientId;
+            _cloudflareSettings.AccessServiceClientSecret = clientSecret;
+            CloudflareSettingsStore.Save(_cloudflareSettings);
+            if (_cloudflareRelay.HostRunning)
+                _cloudflareRelay.StartHost(_cloudflareSettings.RelayHostname, _cloudflareSettings.RelayRoomId, _cloudflareSettings.RelaySecret);
         }
 
         private string CreateCloudflareCode()

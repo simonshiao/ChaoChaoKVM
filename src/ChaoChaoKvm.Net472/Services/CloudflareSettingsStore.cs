@@ -14,6 +14,8 @@ namespace ChaoChaoKvm.Services
         public string RelayHostname { get; set; }
         public string RelayRoomId { get; set; }
         public string RelaySecret { get; set; }
+        public string AccessServiceClientId { get; set; }
+        public string AccessServiceClientSecret { get; set; }
     }
 
     public static class CloudflareSettingsStore
@@ -30,10 +32,11 @@ namespace ChaoChaoKvm.Services
 
         private static readonly byte[] Entropy = Encoding.UTF8.GetBytes("ChaoChaoKvm.Cloudflare.Tunnel.v1");
         private static readonly byte[] RelayEntropy = Encoding.UTF8.GetBytes("ChaoChaoKvm.Cloudflare.Relay.v1");
+        private static readonly byte[] AccessServiceEntropy = Encoding.UTF8.GetBytes("ChaoChaoKvm.Cloudflare.AccessService.v1");
 
         public static CloudflareSettings Load()
         {
-            CloudflareSettings settings = new CloudflareSettings { TunnelToken = "", Hostname = "", RelayHostname = "kvm-relay.chaochao.win", RelayRoomId = NewHex(16), RelaySecret = NewSecret() };
+            CloudflareSettings settings = new CloudflareSettings { TunnelToken = "", Hostname = "", RelayHostname = "kvm-relay.chaochao.win", RelayRoomId = NewHex(16), RelaySecret = NewSecret(), AccessServiceClientId = "", AccessServiceClientSecret = "" };
             try
             {
                 if (!File.Exists(PathName)) return settings;
@@ -49,6 +52,13 @@ namespace ChaoChaoKvm.Services
                 string protectedSecret = JsonUtil.GetString(data, "relay_secret_protected", "");
                 if (!string.IsNullOrWhiteSpace(protectedSecret))
                     settings.RelaySecret = Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(protectedSecret), RelayEntropy, DataProtectionScope.CurrentUser));
+                string serviceId = JsonUtil.GetString(data, "access_service_client_id_protected", "");
+                string serviceSecret = JsonUtil.GetString(data, "access_service_client_secret_protected", "");
+                if (!string.IsNullOrWhiteSpace(serviceId) && !string.IsNullOrWhiteSpace(serviceSecret))
+                {
+                    settings.AccessServiceClientId = Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(serviceId), AccessServiceEntropy, DataProtectionScope.CurrentUser));
+                    settings.AccessServiceClientSecret = Encoding.UTF8.GetString(ProtectedData.Unprotect(Convert.FromBase64String(serviceSecret), AccessServiceEntropy, DataProtectionScope.CurrentUser));
+                }
             }
             catch { settings.TunnelToken = ""; }
             return settings;
@@ -66,7 +76,15 @@ namespace ChaoChaoKvm.Services
             data["relay_hostname"] = (settings.RelayHostname ?? "").Trim();
             data["relay_room_id"] = (settings.RelayRoomId ?? "").Trim();
             data["relay_secret_protected"] = protectedSecret;
+            data["access_service_client_id_protected"] = ProtectAccessValue(settings.AccessServiceClientId);
+            data["access_service_client_secret_protected"] = ProtectAccessValue(settings.AccessServiceClientSecret);
             File.WriteAllText(PathName, JsonUtil.Serialize(data));
+        }
+
+        private static string ProtectAccessValue(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return "";
+            return Convert.ToBase64String(ProtectedData.Protect(Encoding.UTF8.GetBytes(value.Trim()), AccessServiceEntropy, DataProtectionScope.CurrentUser));
         }
 
         private static string NewHex(int count)

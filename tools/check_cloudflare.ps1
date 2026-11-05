@@ -45,6 +45,7 @@ foreach ($hostName in $Hostnames) {
     CloudflareConfigPresent = [bool]$settings
     NamedTunnelConfigured = [bool]($settings -and $settings.tunnel_token_protected)
     RelayConfigured = [bool]($settings -and $settings.relay_room_id -and $settings.relay_secret_protected)
+    AccessServiceAuthConfigured = [bool]($settings -and $settings.access_service_client_id_protected -and $settings.access_service_client_secret_protected)
     RelayHostname = if ($settings) { $settings.relay_hostname } else { '' }
     Endpoints = $endpoints
     Note = 'HTTP 200 Cloudflare Access login page only proves HTTPS and Access routing, not a working KVM WebSocket relay.'
