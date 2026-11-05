@@ -1,8 +1,23 @@
 # ChaoChao KVM Recovery：Cloudflare 遠端連線
 
-Recovery Cloudflare 版保留 LAN 版 HTTP 8001；Cloudflare Tunnel 另加一個遠端入口。關閉 Tunnel 不會停掉 LAN 服務。
+Recovery Cloudflare 版保留 LAN 版 HTTP 8001。Cloudflare 遠端連線與 LAN 互相獨立，不應開放公網 TCP 8001，更不應將 CHAO MCP 的 `mcp.chaochao.win` 當成 KVM 網域。
 
-## 一次性 Cloudflare 設定
+## 2026-11-05 現行版：先驗證 CCF2 HTTPS 中繼
+
+- **目前 UI 的「網路連線／啟用遠端連線」是 CCF2 Relay 路線**：被控制端向 `wss://kvm-relay.chaochao.win/relay` 以 host 角色連線；控制端貼上 CCF2 連線碼後，建立 HTTPS／WebSocket 中繼，仍使用 KVM 既有畫面、鍵鼠、檔案協定。
+- 中繼必須有支援 CCF2 `OPEN/OPENED/FAILED`、房間配對及二進位串流的服務端，並以 **Cloudflare Access 的 hostname-based policy** 保護 WebSocket；只有登入頁回傳 HTTP 200 **無法證明** Relay Worker／Durable Object 或 WebSocket 101 握手成功。
+- 目前兩台 LAN 已驗證正常；HOME-1 與 TW 都能看到 `kvm-relay.chaochao.win` 的 Access 登入頁，但 CCF2 **尚未完成跨網路串流實測**，不能標示為已驗收。
+- 首次使用需登入 Cloudflare Access。請先確認 relay 主機服務端與 Zero Trust 允許規則，不要停用身分驗證，亦不在對話、Git 或日誌分享 CCF2 連線碼（包含配對金鑰）。
+- 診斷：在 KVM 專案根目錄或完整 Release 執行 `powershell -NoProfile -File tools/check_cloudflare.ps1`。僅列連線狀態及是否有受保護設定，不輸出 Token、Room ID、配對金鑰。
+- 正式 `建置.ps1` 會嘗試從開發機已安裝、簽章有效的 Cloudflare 官方 `cloudflared.exe` 一併封裝到 `Release/Recovery`；獨立拷貝新版 Release 時不需再另找它。若建置機未安裝會顯示警告，此包的雲端連線仍需安裝工具。
+- Cloudflare 的全球網路由中國大陸連線仍可能有跨境網路的延遲／不穩；請**在實際中國大陸網路**驗收，不以兩台都在台灣同 LAN 的測試替代。正式操作採 LAN 優先、Cloudflare 作跨網路備援。
+
+官方參考：
+- https://developers.cloudflare.com/network/websockets/
+- https://developers.cloudflare.com/workers/configuration/cloudflare-access/ （Worker-level Access 不支援 WebSocket；須改用 hostname-based Access 應用程式）
+- https://developers.cloudflare.com/china-network/
+
+## 相容模式：CCF1 Named Tunnel（既有備援）
 
 1. 在 Cloudflare Zero Trust 的 **Networks → Tunnels** 建立一條 Named Tunnel，選 Windows 並複製 Tunnel Token。
 2. 在該 Tunnel 新增 TCP Published application route：主機名稱使用 `kvm.chaochao.win`（或 `chaochao.win` 底下尚未使用的子網域），Service 設為 `tcp://localhost:8001`。

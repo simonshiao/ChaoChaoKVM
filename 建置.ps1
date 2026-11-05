@@ -43,7 +43,9 @@ try {
     $agentFiles = @(
         @{ Source = 'AGENTS.md'; Destination = 'AGENTS.md' },
         @{ Source = 'docs\COMPUTER_USE.md'; Destination = 'docs\COMPUTER_USE.md' },
-        @{ Source = 'tools\kvm_computer.py'; Destination = 'tools\kvm_computer.py' }
+        @{ Source = 'tools\kvm_computer.py'; Destination = 'tools\kvm_computer.py' },
+        @{ Source = 'docs\CLOUDFLARE_RECOVERY.md'; Destination = 'docs\CLOUDFLARE_RECOVERY.md' },
+        @{ Source = 'tools\check_cloudflare.ps1'; Destination = 'tools\check_cloudflare.ps1' }
     )
     foreach ($item in $agentFiles) {
         $source = Join-Path $PSScriptRoot $item.Source
@@ -56,6 +58,39 @@ try {
             New-Item -ItemType Directory -Path $directory -Force | Out-Null
         }
         Copy-Item -LiteralPath $source -Destination $destination -Force
+    }
+
+    # Cloudflare 版需攜帶 cloudflared，否則移到沒有安裝 cloudflared 的電腦後無法連線。
+    # 不把第三方執行檔提交進 Git；只從本機已驗證的 Cloudflare 簽章來源複製到 Release。
+    $cloudflaredCandidates = @(
+        $env:CLOUDFLARED_BIN,
+        (Join-Path $env:ProgramFiles 'cloudflared\cloudflared.exe'),
+        'C:\Program Files (x86)\cloudflared\cloudflared.exe'
+    )
+    $cmd = Get-Command 'cloudflared.exe' -ErrorAction SilentlyContinue
+    if ($cmd) { $cloudflaredCandidates += $cmd.Source }
+    $cloudflared = $cloudflaredCandidates |
+        Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } |
+        Select-Object -First 1
+    if ($cloudflared) {
+        $signature = Get-AuthenticodeSignature -LiteralPath $cloudflared
+        if ($signature.Status -ne 'Valid' -or
+            -not $signature.SignerCertificate -or
+            $signature.SignerCertificate.Subject -notmatch 'Cloudflare') {
+            throw "拒絕將未確認 Cloudflare 有效簽章的 cloudflared 加入 Release：$cloudflared"
+        }
+        $cloudflaredDestination = Join-Path $output 'cloudflared.exe'
+        if ([IO.Path]::GetFullPath($cloudflared) -ine [IO.Path]::GetFullPath($cloudflaredDestination)) {
+            Copy-Item -LiteralPath $cloudflared -Destination $cloudflaredDestination -Force
+        }
+        if ((Get-FileHash -LiteralPath $cloudflared -Algorithm SHA256).Hash -ne
+            (Get-FileHash -LiteralPath $cloudflaredDestination -Algorithm SHA256).Hash) {
+            throw 'cloudflared 封裝後雜湊比對失敗。'
+        }
+        Write-Host "Cloudflare 工具已打包：$cloudflaredDestination"
+    }
+    else {
+        Write-Warning '找不到 cloudflared.exe；KVM 本身已建置，但 Cloudflare 遠端連線須在目標電腦安裝 cloudflared。'
     }
     Write-Host "Recovery Release 建置完成：$exe"
 }

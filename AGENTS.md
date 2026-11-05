@@ -8,6 +8,7 @@
 - 若任務是「透過 KVM 操作遠端電腦」，先讀 `docs/COMPUTER_USE.md`。若任務是修改 KVM 原始碼，先看 `README.md` 的來源與建置入口，再讀 `HANDOFF.md` 的最新段落。
 - 這個專案的正式來源是 `src/ChaoChaoKvm.Net472`；正式發行為 `Release/Recovery`；不要把根目錄的舊 `Web` 當正式 Recovery UI。
 - **可攜版入口**：`Release/Recovery` 也會隨建置附上本檔、`docs/COMPUTER_USE.md` 與 `tools/kvm_computer.py`，讓複製整個 Release 資料夾的 Agent 能找到操作方式；僅有 Release 不等於包含原始碼，修改／重建請回正式來源專案。
+- **Cloudflare／跨網路**：先讀 `docs/CLOUDFLARE_RECOVERY.md`；可用 `powershell -NoProfile -File tools/check_cloudflare.ps1` 做不洩露 Token 的預檢。Cloudflare Access 登入頁正常不等於 KVM Relay 已完成 WebSocket 握手。不要把 CHAO MCP 的 Cloudflare 網址當 KVM 的服務端點。
 
 ## Agent 使用 Computer Use 的最短路徑
 

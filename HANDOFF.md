@@ -1,5 +1,16 @@
 # KVM 名稱連線交接（2026-10-26）
 
+## 2026-11-05｜Cloudflare 跨網路遠端接續
+
+- 使用者目標：**只修 ChaoChaoKvm**，讓中國大陸網路可透過 Cloudflare 作為 Google 遠端的備援；暫不修改 CHAO Agent／MCP。
+- 已確認雙端 KVM LAN 正常。既有 Cloudflare 模組有 CCF1 Named Tunnel、CCF2 HTTPS WebSocket Relay，正式 Recovery 為 CloudflareBuild。
+- HOME-1 有有效簽章的 `cloudflared.exe`（2026.8.2），並有 DPAPI 保護的 Tunnel 設定；TW `%LOCALAPPDATA%\ChaoChaoKvm\cloudflare.json` 有 Relay 房間及加密配對金鑰，但無 Named Tunnel Token，且 TW 目前執行的 KVM Release 資料夾內找不到 `cloudflared.exe`。
+- `kvm-relay.chaochao.win` 及 `kvm.chaochao.win` 的 HTTPS GET 能到 Cloudflare Access 登入頁；**這不是 Relay WS 101 或跨網路遠端桌面已成功**。不得直接把 MCP URL 轉成 KVM URL。
+- 已調整根目錄 `建置.ps1`：從有效 Cloudflare 簽章安裝檔打包 `cloudflared.exe`，並加入 `docs/CLOUDFLARE_RECOVERY.md` 與 `tools/check_cloudflare.ps1`。後續先隔離建置及驗證，再更新正式版，不應中斷兩端目前的 LAN 工作。
+- Cloudflare Worker-level Access 保護 WebSocket 會回 403；需檢查 hostname-based Access 和 Relay 真正服務端，並在不同網段及中國大陸實網分別驗收。
+- 本輪隔離建置成功，`E:\0_軟體開發區\4.測試實驗區\KVM\20261105_cloudflare_portable\Recovery` 有 KVM EXE、簽章有效的 cloudflared 2026.8.2（54,893,480 bytes）、Cloudflare 說明與診斷腳本；UI 39 項與 Web state 測試通過。**未取代兩端正在運作的正式 Release。**
+- `kvm-relay.chaochao.win` 與 `kvm.chaochao.win` 的 GET 回應皆為 Cloudflare Access Sign in HTML，不代表中繼服務端已存在或 WS 101 握手成功；Access 登入及實際不同網段／大陸網路仍待驗收。
+
 ## 2026-11-05 晚間：Computer Use 遠端手腳
 
 - 2026-11-05 晚間補強：正式建置 `建置.ps1` 會將 `AGENTS.md`、`docs/COMPUTER_USE.md` 和 `tools/kvm_computer.py` 一起複製進 `Release/Recovery`，避免獨立拷貝套件後 Agent 找不到入口。保留單一原始來源，不建立第二套 MCP Runtime。
