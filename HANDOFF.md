@@ -2,6 +2,7 @@
 
 ## 2026-11-05 晚間：Computer Use 遠端手腳
 
+- 2026-11-05 晚間補強：正式建置 `建置.ps1` 會將 `AGENTS.md`、`docs/COMPUTER_USE.md` 和 `tools/kvm_computer.py` 一起複製進 `Release/Recovery`，避免獨立拷貝套件後 Agent 找不到入口。保留單一原始來源，不建立第二套 MCP Runtime。
 - 使用者已決定不為 KVM 建立 PowerShell／MCP／Agent；CHAO MCP Hub 和 Codex 繼續沿用既有工具，由 KVM 提供遠端畫面與鍵鼠輸入。
 - 既有 loopback LocalAgentApi (127.0.0.1:45889) 擴充八個 `computer_*` 指令：狀態、截圖、滑鼠、按鍵、組合鍵、Unicode 文字；使用既有 KVM HTTP 8001／反向佇列，沒有開新的網路埠。
 - Python CLI：`tools/kvm_computer.py`；實作：`Api/KvmComputerUseAdapter.cs`、`Api/LocalAgentApi.cs`、`Services/InputInjectionService.cs`。詳見 `docs/COMPUTER_USE.md`。

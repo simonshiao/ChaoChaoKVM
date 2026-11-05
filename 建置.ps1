@@ -37,6 +37,26 @@ try {
         "/p:OutputPath=$output\" "/p:IntermediateOutputPath=$intermediate\" "/p:FrameworkPathOverride=$frameworkPath" /verbosity:minimal
     if ($LASTEXITCODE -ne 0) { throw "Recovery Release 建置失敗，MSBuild 結束碼：$LASTEXITCODE" }
     if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "建置完成但找不到執行檔：$exe" }
+
+    # Agent / Codex 必須在複製單獨 Release 資料夾後，仍能找到操作入口。
+    # 僅打包必要文件與既有 CLI，不建立重複的 Agent、MCP 或 PowerShell 服務。
+    $agentFiles = @(
+        @{ Source = 'AGENTS.md'; Destination = 'AGENTS.md' },
+        @{ Source = 'docs\COMPUTER_USE.md'; Destination = 'docs\COMPUTER_USE.md' },
+        @{ Source = 'tools\kvm_computer.py'; Destination = 'tools\kvm_computer.py' }
+    )
+    foreach ($item in $agentFiles) {
+        $source = Join-Path $PSScriptRoot $item.Source
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+            throw "缺少 Agent 操作檔案，取消完成標記：$source"
+        }
+        $destination = Join-Path $output $item.Destination
+        $directory = Split-Path -Parent $destination
+        if (-not (Test-Path -LiteralPath $directory -PathType Container)) {
+            New-Item -ItemType Directory -Path $directory -Force | Out-Null
+        }
+        Copy-Item -LiteralPath $source -Destination $destination -Force
+    }
     Write-Host "Recovery Release 建置完成：$exe"
 }
 finally {
