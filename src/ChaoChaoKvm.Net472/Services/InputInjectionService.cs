@@ -15,6 +15,7 @@ namespace ChaoChaoKvm.Services
         private const uint MouseMiddleUp = 0x0040;
         private const uint MouseWheel = 0x0800;
         private const uint KeyUp = 0x0002;
+        private const uint KeyUnicode = 0x0004;
 
         public void Apply(byte[] payload, ScreenInfo localScreen)
         {
@@ -53,7 +54,60 @@ namespace ChaoChaoKvm.Services
                 bool down = JsonUtil.GetBool(data, "down", false);
                 if (vk > 0 && vk < 256) keybd_event((byte)vk, 0, down ? 0u : KeyUp, UIntPtr.Zero);
             }
+            else if (kind == "unicode")
+            {
+                string text = JsonUtil.GetString(data, "text", "");
+                if (text.Length == 0 || text.Length > 2048) return;
+                // 直接輸入 Unicode，不透過剪貼簿，避免覆寫使用者剪貼內容。
+                NativeInput[] events = new NativeInput[text.Length * 2];
+                for (int i = 0; i < text.Length; i++)
+                {
+                    events[i * 2].Type = 1;
+                    events[i * 2].Data.Keyboard = new KeyboardInput { Scan = text[i], Flags = KeyUnicode };
+                    events[i * 2 + 1].Type = 1;
+                    events[i * 2 + 1].Data.Keyboard = new KeyboardInput { Scan = text[i], Flags = KeyUnicode | KeyUp };
+                }
+                SendInput((uint)events.Length, events, Marshal.SizeOf(typeof(NativeInput)));
+            }
         }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NativeInput
+        {
+            public uint Type;
+            public InputUnion Data;
+        }
+        [StructLayout(LayoutKind.Explicit)]
+        private struct InputUnion
+        {
+            [FieldOffset(0)] public KeyboardInput Keyboard;
+            [FieldOffset(0)] public MouseInput Mouse;
+            [FieldOffset(0)] public HardwareInput Hardware;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        private struct KeyboardInput
+        {
+            public ushort VirtualKey;
+            public ushort Scan;
+            public uint Flags;
+            public uint Time;
+            public UIntPtr ExtraInfo;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MouseInput
+        {
+            public int X, Y;
+            public uint Data, Flags, Time;
+            public UIntPtr ExtraInfo;
+        }
+        [StructLayout(LayoutKind.Sequential)]
+        private struct HardwareInput
+        {
+            public uint Message;
+            public ushort ParamLow, ParamHigh;
+        }
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint SendInput(uint count, NativeInput[] inputs, int inputSize);
 
         private static double GetDouble(Dictionary<string, object> data, string key, double fallback)
         {

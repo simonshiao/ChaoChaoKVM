@@ -84,6 +84,7 @@
     <Compile Include="Services\CloudflareRelayService.cs" />
     <Compile Include="Services\CloudflareSettingsStore.cs" />
     <Compile Include="Api\LocalAgentApi.cs" />
+    <Compile Include="Api\KvmComputerUseAdapter.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

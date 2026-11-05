@@ -13,6 +13,7 @@ namespace ChaoChaoKvm.Api
     public sealed class LocalAgentApi : IDisposable
     {
         private readonly KvmPeerManager _manager;
+        private readonly KvmComputerUseAdapter _computer;
         private TcpListener _listener;
         private Thread _thread;
         private volatile bool _running;
@@ -21,6 +22,7 @@ namespace ChaoChaoKvm.Api
         public LocalAgentApi(KvmPeerManager manager)
         {
             _manager = manager;
+            _computer = new KvmComputerUseAdapter(manager);
             int port;
             string raw = Environment.GetEnvironmentVariable("CHAO_KVM_API_PORT");
             Port = int.TryParse(raw, out port) && port > 1024 && port <= 65535 ? port : (BuildFlavor.IsOnline ? Protocol.DefaultAgentPort + 1 : Protocol.DefaultAgentPort);
@@ -72,6 +74,12 @@ namespace ChaoChaoKvm.Api
         private Dictionary<string, object> Dispatch(Dictionary<string, object> request)
         {
             string cmd = JsonUtil.GetString(request, "cmd", "").ToLowerInvariant();
+            if (cmd == "computer_status") return _computer.Status(request);
+            if (cmd == "computer_screenshot") return _computer.Screenshot(request);
+            if (cmd == "computer_click" || cmd == "computer_move" || cmd == "computer_scroll")
+                return _computer.Mouse(request, cmd);
+            if (cmd == "computer_key" || cmd == "computer_hotkey" || cmd == "computer_type")
+                return _computer.Keyboard(request, cmd);
             if (cmd == "status") return Ok("status", _manager.Snapshot());
             if (cmd == "connect")
             {
@@ -131,7 +139,8 @@ namespace ChaoChaoKvm.Api
                 _manager.ConfigureTransfer(path, overwrite);
                 return Ok("path", path);
             }
-            if (cmd == "help") return Ok("commands", new[] { "status", "connect", "retry", "ping_peer", "allow_control", "input", "send_json", "send_file", "set_receive_dir" });
+            if (cmd == "help") return Ok("commands", new[] { "status", "connect", "retry", "ping_peer", "allow_control", "input", "send_json", "send_file", "set_receive_dir",
+                "computer_status", "computer_screenshot", "computer_click", "computer_move", "computer_scroll", "computer_key", "computer_hotkey", "computer_type" });
             return new Dictionary<string, object> { { "ok", false }, { "error", "unknown_command:" + cmd } };
         }
 
@@ -147,6 +156,7 @@ namespace ChaoChaoKvm.Api
         {
             _running = false;
             try { if (_listener != null) _listener.Stop(); } catch { }
+            _computer.Dispose();
         }
     }
 }

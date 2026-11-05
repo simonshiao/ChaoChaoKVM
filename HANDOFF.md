@@ -1,5 +1,16 @@
 # KVM 名稱連線交接（2026-10-26）
 
+## 2026-11-05 晚間：Computer Use 遠端手腳
+
+- 使用者已決定不為 KVM 建立 PowerShell／MCP／Agent；CHAO MCP Hub 和 Codex 繼續沿用既有工具，由 KVM 提供遠端畫面與鍵鼠輸入。
+- 既有 loopback LocalAgentApi (127.0.0.1:45889) 擴充八個 `computer_*` 指令：狀態、截圖、滑鼠、按鍵、組合鍵、Unicode 文字；使用既有 KVM HTTP 8001／反向佇列，沒有開新的網路埠。
+- Python CLI：`tools/kvm_computer.py`；實作：`Api/KvmComputerUseAdapter.cs`、`Api/LocalAgentApi.cs`、`Services/InputInjectionService.cs`。詳見 `docs/COMPUTER_USE.md`。
+- 注意：`queued=true` 僅代表已送出/排隊，須再截圖驗證遠端真的操作；Unicode 需要遠端也更新。
+- 正式 Recovery 已在 @CHAO2 正常關閉舊 PID 21452 後，用既有 `建置.ps1`、`啟動.vbs` 重建啟動；新 PID **34640**（2026/11/05 17:43），實測 TCP 8001／127.0.0.1:45889 都由新程序監聽。
+- 實機 CLI `computer_status` 成功回傳 `192.168.1.4 / TWCYNNB1302 / 1920×1080`；`computer_screenshot` 取得並解碼真實 JPEG。實驗輸出位置：`E:\0_軟體開發區\4.測試實驗區\KVM\20261105_computeruse`。
+- `computer_click` 已送入 KVM queue，但當時遠端是 Windows 鎖定畫面，點擊前後畫面沒有可驗證變化；**鍵鼠實際生效與 Unicode 跨機仍待遠端解鎖／同步新版驗收**，不能宣稱全通過。
+- 隔離測試編譯、UI 行為 39 項、LAN 43 項、Python 解析與 5 個異常拒絕測試均通過；尚未驗證 Codex 直接調用的完整 workflow，現階段由既有 `exec_command` 執行 CLI。
+
 ## 2026-11-05 下午接手：Recovery 正式版已更新並啟動
 
 - 由 @CHAO2 直接檢查：Git `main` 先前最新提交 `9d18827` 已包含 Recovery 固定 8001，接手時工作目錄乾淨。
