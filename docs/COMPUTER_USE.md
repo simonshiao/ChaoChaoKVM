@@ -18,6 +18,8 @@ python -B tools/kvm_computer.py key --key enter
 python -B tools/kvm_computer.py scroll --x 700 --y 440 --delta -120
 ```
 
+如果 `python` 指到 Microsoft Store 別名，但電腦已安裝 Python，可優先使用 Windows Python Launcher：`py -3.12 -B tools/kvm_computer.py status`；TW 電腦也已驗證 `D:\Python312\python.exe` 可用。此 CLI 僅用 Python 標準函式庫，現有 Python 可運作時，不需要另外打包一套 Runtime。
+
 `--peer 192.168.x.x` 可指定已連線電腦；省略時採用目前 ActivePeerIp。座標是遠端 JPEG 原始像素，不是縮放後 KVM 視窗座標。
 
 ## 本機 API
