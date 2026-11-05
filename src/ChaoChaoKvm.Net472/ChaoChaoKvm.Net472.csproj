@@ -7,7 +7,7 @@
     <OutputType>WinExe</OutputType>
     <RootNamespace>ChaoChaoKvm</RootNamespace>
     <AssemblyName>ChaoChaoKvm</AssemblyName>
-    <ApplicationIcon>..\..\..\..\6.模板與共用資源區\Icons\01_ICO\Chao_001.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\ChaoChaoKvm.ico</ApplicationIcon>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -26,7 +26,7 @@
     <DebugSymbols>false</DebugSymbols>
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\..\</OutputPath>
+    <OutputPath>..\..\Release\Recovery\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -74,6 +74,7 @@
     <Compile Include="Services\PeerSession.cs" />
     <Compile Include="Services\HttpPeerServer.cs" />
     <Compile Include="Services\LanDiscoveryService.cs" />
+    <Compile Include="Services\MdnsLanDiscovery.cs" />
     <Compile Include="Services\HttpPeerClient.cs" />
     <Compile Include="Services\RemotePeerSession.cs" />
     <Compile Include="Services\KvmPeerManager.cs" />
@@ -86,6 +87,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
+    <None Include="Assets\ChaoChaoKvm.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- Only the explicit production publish backs up the previously shipped EXE. -->
@@ -108,6 +110,6 @@
   </Target>
   <PropertyGroup Condition="'$(CloudflareBuild)' == 'true'">
     <DefineConstants>$(DefineConstants);CLOUDFLARE_BUILD</DefineConstants>
-    <OutputPath>E:\0_軟體開發區\1.成品區\ChaoChaoKvm-Recovery\</OutputPath>
+    <OutputPath>..\..\Release\Recovery\</OutputPath>
   </PropertyGroup>
 </Project>

@@ -31,6 +31,7 @@ namespace ChaoChaoKvm.Services
         private readonly int _httpPort, _discoveryPort;
         private readonly IPAddress _bindAddress;
         private readonly Func<string, bool> _isLocal;
+        private readonly MdnsLanDiscovery _mdns;
         private readonly object _sync = new object(), _sendSync = new object();
         private readonly Dictionary<string, LanPeerAddress> _peers = new Dictionary<string, LanPeerAddress>();
         private readonly Dictionary<string, DateTime> _replied = new Dictionary<string, DateTime>();
@@ -46,6 +47,7 @@ namespace ChaoChaoKvm.Services
         {
             _id = id; _name = name; _httpPort = httpPort; _discoveryPort = discoveryPort;
             _bindAddress = bindAddress; _isLocal = isLocal;
+            _mdns = new MdnsLanDiscovery(id, name, httpPort, isLocal, AddMdnsPeer);
         }
 
         public bool Running { get { return _running; } }
@@ -63,6 +65,11 @@ namespace ChaoChaoKvm.Services
                 socket.Client.ReceiveTimeout = 500;
                 socket.Ttl = 1;
                 _udp = socket; _running = true;
+                if (_discoveryPort != 0)
+                {
+                    try { _mdns.Start(); }
+                    catch (Exception ex) { System.Diagnostics.Trace.TraceWarning("KVM mDNS discovery unavailable; UDP discovery remains active: " + ex.Message); }
+                }
                 _thread = new Thread(ReceiveLoop) { IsBackground = true, Name = "ChaoKvmLanDiscovery" };
                 _thread.Start();
             }
@@ -74,6 +81,8 @@ namespace ChaoChaoKvm.Services
             lock (_sync) _nextSearchUtc = DateTime.UtcNow.AddSeconds(10);
             if (!_running) return;
             foreach (IPEndPoint target in BroadcastTargets()) SendQuery(target);
+            try { _mdns.Search(); }
+            catch (Exception ex) { System.Diagnostics.Trace.TraceWarning("KVM mDNS search failed; UDP discovery remains active: " + ex.Message); }
         }
 
         internal void SendQuery(IPEndPoint endpoint) { Send("query", endpoint); }
@@ -140,6 +149,23 @@ namespace ChaoChaoKvm.Services
         private void Expire()
         {
             foreach (string key in _peers.Where(p => DateTime.UtcNow - p.Value.SeenUtc > TimeSpan.FromSeconds(30)).Select(p => p.Key).ToArray()) _peers.Remove(key);
+        }
+
+        private void AddMdnsPeer(LanPeerAddress peer)
+        {
+            Guid parsed;
+            if (peer == null || _isLocal(peer.Ip) || !NetworkUtils.IsPrivateOrLinkLocal(peer.Ip) ||
+                peer.Port < 1025 || peer.Port > 65535 || !Guid.TryParseExact(peer.Id, "N", out parsed)) return;
+            lock (_sync)
+            {
+                Expire();
+                string key = peer.Id + "/" + peer.Ip;
+                if (_peers.Count < 128 || _peers.ContainsKey(key))
+                {
+                    peer.SeenUtc = DateTime.UtcNow;
+                    _peers[key] = peer;
+                }
+            }
         }
 
         internal LanPeerAddress[] Peers()
@@ -300,6 +326,8 @@ namespace ChaoChaoKvm.Services
         public void Dispose()
         {
             _running = false;
+            try { _mdns.Dispose(); }
+            catch (Exception ex) { System.Diagnostics.Trace.TraceWarning("KVM mDNS shutdown: " + ex.Message); }
             if (_udp != null) _udp.Close();
             if (_thread != null && _thread != Thread.CurrentThread) _thread.Join(1000);
             lock (_sync) _peers.Clear();

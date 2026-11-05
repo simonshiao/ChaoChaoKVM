@@ -1,5 +1,6 @@
 extern alias Kvm;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -124,6 +125,26 @@ internal static class LanDiscoveryTests
             {
                 Error(() => normal.Resolve("127.0.0.1", CancellationToken.None), "本機 IP");
                 Error(() => normal.Resolve("127.0.0.2", CancellationToken.None), "本機 IP");
+            }
+            bool hasPhysicalMdnsInterface = NetworkInterface.GetAllNetworkInterfaces().Any(n =>
+                n.OperationalStatus == OperationalStatus.Up &&
+                (n.NetworkInterfaceType == NetworkInterfaceType.Ethernet || n.NetworkInterfaceType == NetworkInterfaceType.Wireless80211) &&
+                n.GetIPProperties().UnicastAddresses.Any(a => a.Address.AddressFamily == AddressFamily.InterNetwork && a.IPv4Mask != null));
+            if (hasPhysicalMdnsInterface)
+            {
+                string hostId = Guid.NewGuid().ToString("N"), browserId = Guid.NewGuid().ToString("N");
+                List<LanPeerAddress> mdnsPeers = new List<LanPeerAddress>();
+                object mdnsSync = new object();
+                Action<LanPeerAddress> captureMdnsPeer = peer => { lock (mdnsSync) mdnsPeers.Add(peer); };
+                using (MdnsLanDiscovery browser = new MdnsLanDiscovery(browserId, "MDNS-BROWSER", 8001, ipValue => false, captureMdnsPeer))
+                using (MdnsLanDiscovery host = new MdnsLanDiscovery(hostId, "MDNS-HOST", 8001, ipValue => false, captureMdnsPeer))
+                {
+                    browser.Start(); host.Start(); browser.Search();
+                    Wait(() => { lock (mdnsSync) return mdnsPeers.Any(p => p.Id == hostId); }, "mDNS DNS-SD finds a KVM peer on a physical LAN interface");
+                    LanPeerAddress peer;
+                    lock (mdnsSync) peer = mdnsPeers.First(p => p.Id == hostId);
+                    Check(peer.Name == "MDNS-HOST" && peer.Port == 8001 && NetworkUtils.IsPrivateOrLinkLocal(peer.Ip), "mDNS returns the advertised computer name, HTTP port, and private address");
+                }
             }
             if (!IPAddress.IsLoopback(_bind))
             {

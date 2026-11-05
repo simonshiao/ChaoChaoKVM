@@ -39,6 +39,11 @@ namespace ChaoChaoKvm
 
         public event Action<string, string> ToolsRequested;
         public event Action SessionsChanged;
+        public event Action ExitRequested;
+
+        private bool _returnToMainRequested;
+        private bool _closingForApplicationShutdown;
+        private bool _closed;
 
         public MultiSessionWindow(KvmPeerManager manager)
         {
@@ -50,7 +55,15 @@ namespace ChaoChaoKvm
             _renderTimer.Start();
             Deactivated += delegate { ReleaseRemoteInput(); };
             Viewer.LostMouseCapture += delegate { if (_buttons.Count > 0) ReleaseRemoteInput(); };
-            Closed += delegate { DisposeSessions(); _renderTimer.Stop(); };
+            Closed += delegate
+            {
+                if (_closed) return;
+                _closed = true;
+                DisposeSessions();
+                _renderTimer.Stop();
+                if (!_returnToMainRequested && !_closingForApplicationShutdown && ExitRequested != null)
+                    ExitRequested();
+            };
         }
 
         public void OpenPeer(string ip, string displayName, int activeFps)
@@ -126,9 +139,9 @@ namespace ChaoChaoKvm
                 if (next != null) SelectPeer(next.PeerIp); else { RemoteImage.Source = null; _hasFrame = false; }
             }
             RebuildTabs(); UpdateChrome(); RaiseSessionsChanged();
-            // The final tab closes the viewer and returns to the main window.
-            // The app (and its sharing server) stays alive until the main
-            // window is explicitly closed.
+            // Closing the final remote tab means the user is done with KVM.
+            // Closing the viewer requests full app shutdown; Back remains the
+            // explicit way to return to the main window while keeping sharing on.
             if (_sessions.Count == 0) Close();
         }
 
@@ -261,7 +274,17 @@ namespace ChaoChaoKvm
         private void OpenFiles(object sender, RoutedEventArgs e) { ReleaseRemoteInput(); RaiseTool("files"); }
         private void OpenSettings(object sender, RoutedEventArgs e) { ReleaseRemoteInput(); RaiseTool("settings"); }
         private void RaiseTool(string name) { if (ToolsRequested != null) ToolsRequested(name, _active == null ? "" : _active.PeerIp); }
-        private void CloseView(object sender, RoutedEventArgs e) { Close(); }
+        private void CloseView(object sender, RoutedEventArgs e)
+        {
+            _returnToMainRequested = true;
+            Close();
+        }
+
+        public void CloseForApplicationShutdown()
+        {
+            _closingForApplicationShutdown = true;
+            if (!_closed) Close();
+        }
 
         private void EndActiveSession(object sender, RoutedEventArgs e)
         {

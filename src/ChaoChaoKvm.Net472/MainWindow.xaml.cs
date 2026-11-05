@@ -97,7 +97,7 @@ namespace ChaoChaoKvm
             _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _timer.Tick += delegate { PublishState(); if (BuildFlavor.IsOnline) TryPublishRegistry(false); if (_openOnConnect && _manager.IsPeerConnected(_manager.ActivePeerIp)) { _openOnConnect = false; OpenSession(); } };
             Loaded += OnLoaded;
-            Closed += delegate { ShutdownServices(); };
+            Closing += delegate { ShutdownServices(); };
         }
 
         public void RestoreExistingWindow()
@@ -122,7 +122,7 @@ namespace ChaoChaoKvm
             if (_connectCancellation != null) _connectCancellation.Cancel();
             // A failure in one service must not prevent the HTTP listener,
             // capture workers and local Agent API from releasing their ports.
-            try { if (_multiSession != null) _multiSession.Close(); } catch (Exception ex) { Debug.WriteLine(ex); }
+            try { if (_multiSession != null) _multiSession.CloseForApplicationShutdown(); } catch (Exception ex) { Debug.WriteLine(ex); }
             try { if (_ngrok != null) _ngrok.Dispose(); } catch (Exception ex) { Debug.WriteLine(ex); }
             try { if (_cloudflare != null) _cloudflare.Dispose(); } catch (Exception ex) { Debug.WriteLine(ex); }
             try { if (_cloudflareRelay != null) _cloudflareRelay.Dispose(); } catch (Exception ex) { Debug.WriteLine(ex); }
@@ -381,18 +381,18 @@ namespace ChaoChaoKvm
                 Show(); Activate(); Post(new { type = "page", name = page });
             };
             _multiSession.SessionsChanged += PublishState;
+            _multiSession.ExitRequested += delegate { if (!_closed) Close(); };
             _multiSession.Closed += delegate {
                 _multiSession = null;
-                // Remote desktop hides the main window. Closing the viewer must
-                // restore it, otherwise the HTTP 8001 server looks like a ghost
-                // process and a second launch collides with the original one.
+                // The viewer's explicit Back action returns to the main window.
+                // Closing the viewer itself requests full application shutdown.
                 if (!_closed && !IsVisible)
                 {
                     if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
                     Show();
                     Activate();
                 }
-                PublishState();
+                if (!_closed) PublishState();
             };
         }
 

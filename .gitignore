@@ -5,6 +5,7 @@
 **/.wrangler/
 **/.wrangler-dry-run/
 /dist-*/
+/Release/Recovery/
 /tests/*-build/
 
 # Local IDE and runtime state
@@ -16,7 +17,6 @@
 *.tmp
 
 # Local credentials and machine-specific settings
-ngrok-kvm.yml
 AI_API_TEST.txt
 .env
 .env.*

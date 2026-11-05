@@ -57,7 +57,7 @@
                     <ColumnDefinition Width="*" MinWidth="90"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Column="0" x:Name="BackButton" Style="{StaticResource ToolButton}" Content="← 返回" Click="CloseView" ToolTip="返回 KVM 主畫面（本機分享服務會繼續運作）"/>
+                <Button Grid.Column="0" x:Name="BackButton" Style="{StaticResource ToolButton}" Content="← 返回" Click="CloseView" ToolTip="返回 KVM 主畫面；分享服務會繼續運作"/>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,8,0">
                     <TextBlock x:Name="PeerName" Text="遠端桌面" FontWeight="SemiBold" FontSize="13" TextTrimming="CharacterEllipsis" Foreground="#202D3E"/>
                     <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
@@ -77,7 +77,7 @@
                     <Button Style="{StaticResource ToolButton}" Content="⚙ 設定" Click="OpenSettings" ToolTip="開啟連線與畫質設定"/>
                     <Button x:Name="FullScreenButton" Style="{StaticResource ToolButton}" Content="⛶ 全螢幕" Click="ToggleFullScreen" ToolTip="全螢幕顯示遠端桌面"/>
                     <Button x:Name="ControlButton" Style="{StaticResource ToolButton}" Content="控制中" Click="ToggleReadOnly" ToolTip="切換唯讀／控制模式"/>
-                    <Button x:Name="EndSessionButton" Style="{StaticResource ToolButton}" Content="關閉分頁 ×" Click="EndActiveSession" ToolTip="只關閉目前遠端分頁；本機分享服務持續運作"
+                    <Button x:Name="EndSessionButton" Style="{StaticResource ToolButton}" Content="關閉分頁 ×" Click="EndActiveSession" ToolTip="關閉目前遠端分頁；關閉最後一個分頁時會結束程式"
                             Foreground="#B74444" BorderBrush="#F0D7D7"/>
                 </StackPanel>
             </Grid>
