@@ -1,5 +1,7 @@
 interface AccessIdentity {
   email?: string;
+  service_token_id?: string;
+  service_token_status?: boolean;
 }
 
 interface AccessContext extends ExecutionContext {
@@ -11,6 +13,7 @@ interface AccessContext extends ExecutionContext {
 interface Env {
   RELAY_ROOMS: DurableObjectNamespace<KvmRelayRoom>;
   ACCESS_EMAIL: string;
+  ACCESS_SERVICE_TOKEN_IDS?: string;
 }
 
 interface SocketAttachment {
@@ -35,7 +38,7 @@ export default {
     }
 
     const identity = await ctx.access?.getIdentity();
-    if (!identity?.email || identity.email.toLowerCase() !== env.ACCESS_EMAIL.toLowerCase()) {
+    if (!isAllowedIdentity(identity, env)) {
       return new Response("Cloudflare Access authorization required", { status: 403 });
     }
     if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
@@ -54,10 +57,22 @@ export default {
     const headers = new Headers(request.headers);
     headers.set("X-KVM-Role", role);
     headers.set("X-KVM-Room-Secret", secret);
-    headers.set("X-KVM-Access-Email", identity.email);
+    headers.set("X-KVM-Access-Email", identity?.email || "");
+    headers.set("X-KVM-Service-Token-Id", identity?.service_token_id || "");
+    headers.set("X-KVM-Service-Token-Status", identity?.service_token_status === true ? "true" : "false");
     return stub.fetch(new Request("https://relay.internal/room", { method: "GET", headers }));
   },
 };
+
+function isAllowedIdentity(identity: AccessIdentity | undefined, env: Env): boolean {
+  if (!identity) return false;
+  if (identity.email?.toLowerCase() === env.ACCESS_EMAIL.toLowerCase()) return true;
+  return identity.service_token_status === true && allowedServiceTokenIds(env).has(identity.service_token_id || "");
+}
+
+function allowedServiceTokenIds(env: Env): Set<string> {
+  return new Set((env.ACCESS_SERVICE_TOKEN_IDS || "").split(",").map(value => value.trim()).filter(Boolean));
+}
 
 export class KvmRelayRoom {
   constructor(private readonly state: DurableObjectState, private readonly env: Env) {}
@@ -69,7 +84,11 @@ export class KvmRelayRoom {
     const role = request.headers.get("X-KVM-Role") as SocketAttachment["role"] | null;
     const secret = request.headers.get("X-KVM-Room-Secret") || "";
     const email = request.headers.get("X-KVM-Access-Email") || "";
-    if ((role !== "host" && role !== "client") || !email || email.toLowerCase() !== this.env.ACCESS_EMAIL.toLowerCase()) {
+    const serviceTokenId = request.headers.get("X-KVM-Service-Token-Id") || "";
+    const serviceTokenAuthenticated = request.headers.get("X-KVM-Service-Token-Status") === "true";
+    const allowedEmail = email.toLowerCase() === this.env.ACCESS_EMAIL.toLowerCase();
+    const allowedServiceToken = serviceTokenAuthenticated && allowedServiceTokenIds(this.env).has(serviceTokenId);
+    if ((role !== "host" && role !== "client") || (!allowedEmail && !allowedServiceToken)) {
       return new Response("Unauthorized", { status: 403 });
     }
 
