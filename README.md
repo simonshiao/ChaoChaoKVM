@@ -2,6 +2,8 @@
 
 Windows 桌面 KVM 與檔案傳輸工具。區域網路畫面、輸入與傳檔沿用 HTTP/TCP 8001；Recovery 另包含 Cloudflare 網路中繼。
 
+> **給 Agent／Codex**：進入本專案先讀 [AGENTS.md](AGENTS.md)；需要透過 KVM 遠端操作其他電腦時，按需讀 [Computer Use 使用說明](docs/COMPUTER_USE.md)。這套能力透過既有 CHAO MCP Hub 的工具和 KVM 本機 API 使用，不需另外建置 Agent 或 PowerShell 服務。
+
 Recovery/LAN 固定使用 HTTP 8001；升級時會忽略舊設定檔中的其他埠號，避免區網探索因兩端埠號不同而漏掉設備。Online 版維持獨立埠號。
 
 ## 開發與啟動
