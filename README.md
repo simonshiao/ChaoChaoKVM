@@ -2,6 +2,8 @@
 
 Windows 桌面 KVM 與檔案傳輸工具。區域網路畫面、輸入與傳檔沿用 HTTP/TCP 8001；Recovery 另包含 Cloudflare 網路中繼。
 
+Recovery/LAN 固定使用 HTTP 8001；升級時會忽略舊設定檔中的其他埠號，避免區網探索因兩端埠號不同而漏掉設備。Online 版維持獨立埠號。
+
 ## 開發與啟動
 
 - 目前母專案：本資料夾的 `ChaoChaoKvm.sln`。

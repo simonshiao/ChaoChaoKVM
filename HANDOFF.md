@@ -7,6 +7,7 @@
 - MSBuild 中間檔使用獨立暫存目錄，避免散落在原始碼樹；`Release\Recovery` 由 Git 忽略。
 - 本地 KVM 圖示改由 `src\ChaoChaoKvm.Net472\Assets\ChaoChaoKvm.ico` 提供，不再依賴專案外的素材路徑。
 - 已使用根目錄建置腳本成功產生 `Release\Recovery\ChaoChaoKvm.exe`，確認 Web、WebView2 DLL 與原生 Loader 都在套件中；目前舊測試版仍執行中，因此未啟動新版。
+- Recovery/LAN 固定 HTTP 8001；啟動時忽略舊設定檔的 `listen_port`，避免舊的 80 埠設定讓 mDNS/UDP 廣播被同埠篩選隱藏。Online 版仍沿用自己的設定埠。
 
 ## 2026-11-04 區網 mDNS 探索補強
 

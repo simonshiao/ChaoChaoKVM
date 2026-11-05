@@ -73,7 +73,12 @@ namespace ChaoChaoKvm.Core
                 config.JpegQuality = Math.Max(25, Math.Min(85, JsonUtil.GetInt(data, "jpeg_quality", config.JpegQuality)));
                 config.ReceiveDirectory = JsonUtil.GetString(data, "receive_directory", config.ReceiveDirectory);
                 config.OverwriteFiles = JsonUtil.GetBool(data, "overwrite_files", config.OverwriteFiles);
-                config.ListenPort = Math.Max(1, Math.Min(65535, JsonUtil.GetInt(data, "listen_port", config.ListenPort)));
+                // Recovery/LAN uses the shared HTTP 8001 protocol. Ignore old
+                // per-user values (for example port 80) so upgrades converge
+                // both peers back to the same discovery and connection port.
+                config.ListenPort = BuildFlavor.IsOnline
+                    ? Math.Max(1, Math.Min(65535, JsonUtil.GetInt(data, "listen_port", config.ListenPort)))
+                    : Protocol.DefaultPort;
                 string protectedAccessKey = JsonUtil.GetString(data, "online_access_key_protected", "");
                 string restoredAccessKey = UnprotectSecret(protectedAccessKey);
                 config.OnlineAccessKey = string.IsNullOrWhiteSpace(restoredAccessKey) ? JsonUtil.GetString(data, "online_access_key", config.OnlineAccessKey) : restoredAccessKey;
